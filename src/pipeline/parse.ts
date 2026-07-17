@@ -1,5 +1,5 @@
 import MarkdownIt from "markdown-it";
-import { type CanvasAttrs, type SceneAttrs, type SceneIR, type SceneRegionIR } from "./types.js";
+import { type CanvasAttrs, type RegionAttrs, type RegionGroupAttrs, type SceneAttrs, type SceneIR, type SceneRegionIR } from "./types.js";
 
 const markdownIt = new MarkdownIt({ html: false });
 
@@ -170,7 +170,7 @@ function parseRegion(lines: string[], startIndex: number, indent: number): { reg
 
   let cursor = startIndex + 1;
   const bodyLines: string[] = [];
-  const attrs: Record<string, unknown> = {};
+  const attrs: RegionAttrs = {};
 
   while (cursor < lines.length) {
     const currentLine = lines[cursor];
@@ -187,19 +187,32 @@ function parseRegion(lines: string[], startIndex: number, indent: number): { reg
       break;
     }
 
+    const explicitMatch = currentLine.match(/^\s*(?:[-*+]|\d+\.)\s+@silmaril:(?:\s*(.*))?$/);
+    if (explicitMatch) {
+      const nested = parseSilmarilAttributeBlock(lines, cursor + 1, currentIndent);
+      Object.assign(attrs, nested.attrs);
+      cursor = nested.nextIndex;
+      continue;
+    }
+
     const attrMatch = currentLine.match(/^\s*(?:[-*+]|\d+\.)\s+([^:]+):(?:\s*(.*))?$/);
     if (attrMatch) {
       const key = attrMatch[1].trim();
-      const rawValue = attrMatch[2]?.trim();
-      if (rawValue === undefined || rawValue === "") {
-        const nested = parseAttributeBlock(lines, cursor + 1, currentIndent);
-        attrs[key] = nested.attrs;
-        cursor = nested.nextIndex;
-      } else {
-        attrs[key] = parseScalar(rawValue);
-        cursor += 1;
+      if (isSupportedRegionAttributeKey(key)) {
+        const rawValue = attrMatch[2]?.trim();
+        if (key === "group") {
+          const nested = parseGroupAttributeBlock(lines, cursor + 1, currentIndent);
+          attrs.group = nested.attrs;
+          cursor = nested.nextIndex;
+        } else {
+          const numericValue = parseNumericAttribute(rawValue ?? "");
+          if (numericValue !== undefined) {
+            attrs[key] = numericValue;
+          }
+          cursor += 1;
+        }
+        continue;
       }
-      continue;
     }
 
     bodyLines.push(currentLine);
@@ -207,10 +220,9 @@ function parseRegion(lines: string[], startIndex: number, indent: number): { reg
   }
 
   region.attrs = attrs;
-  if (typeof attrs.group === "object" && attrs.group !== null) {
-    const groupAttrs = attrs.group as Record<string, unknown>;
-    if (typeof groupAttrs.id === "string") {
-      region.groupId = groupAttrs.id;
+  if (attrs.group) {
+    if (typeof attrs.group.id === "string") {
+      region.groupId = attrs.group.id;
     }
   }
   region.body = bodyLines.join("\n").trim();
@@ -221,8 +233,53 @@ function parseRegion(lines: string[], startIndex: number, indent: number): { reg
   return { region, nextIndex: cursor };
 }
 
-function parseAttributeBlock(lines: string[], startIndex: number, baseIndent: number): { attrs: Record<string, unknown>; nextIndex: number } {
-  const attrs: Record<string, unknown> = {};
+function parseSilmarilAttributeBlock(lines: string[], startIndex: number, baseIndent: number): { attrs: RegionAttrs; nextIndex: number } {
+  const attrs: RegionAttrs = {};
+  let cursor = startIndex;
+
+  while (cursor < lines.length) {
+    const currentLine = lines[cursor];
+    const trimmed = currentLine.trim();
+    if (!trimmed) {
+      cursor += 1;
+      continue;
+    }
+
+    const currentIndent = countIndent(currentLine);
+    if (currentIndent <= baseIndent) {
+      break;
+    }
+
+    const attrMatch = currentLine.match(/^\s*(?:[-*+]|\d+\.)\s+([^:]+):(?:\s*(.*))?$/);
+    if (!attrMatch) {
+      break;
+    }
+
+    const key = attrMatch[1].trim();
+    if (key === "group") {
+      const nested = parseGroupAttributeBlock(lines, cursor + 1, currentIndent);
+      attrs.group = nested.attrs;
+      cursor = nested.nextIndex;
+      continue;
+    }
+
+    if (!isSupportedRegionAttributeKey(key)) {
+      break;
+    }
+
+    const rawValue = attrMatch[2]?.trim();
+    const numericValue = parseNumericAttribute(rawValue ?? "");
+    if (numericValue !== undefined) {
+      attrs[key] = numericValue;
+    }
+    cursor += 1;
+  }
+
+  return { attrs, nextIndex: cursor };
+}
+
+function parseGroupAttributeBlock(lines: string[], startIndex: number, baseIndent: number): { attrs: RegionGroupAttrs; nextIndex: number } {
+  const attrs: RegionGroupAttrs = {};
   let cursor = startIndex;
 
   while (cursor < lines.length) {
@@ -245,17 +302,63 @@ function parseAttributeBlock(lines: string[], startIndex: number, baseIndent: nu
 
     const key = attrMatch[1].trim();
     const rawValue = attrMatch[2]?.trim();
-    if (rawValue === undefined || rawValue === "") {
-      const nested = parseAttributeBlock(lines, cursor + 1, currentIndent);
-      attrs[key] = nested.attrs;
-      cursor = nested.nextIndex;
-    } else {
-      attrs[key] = parseScalar(rawValue);
+    if (key === "id") {
+      if (typeof rawValue === "string" && rawValue.length > 0) {
+        attrs.id = rawValue;
+      }
       cursor += 1;
+      continue;
     }
+
+    if (!isSupportedGroupAttributeKey(key)) {
+      break;
+    }
+
+    const numericValue = parseNumericAttribute(rawValue ?? "");
+    switch (key) {
+      case "x":
+        if (numericValue !== undefined) {
+          attrs.x = numericValue;
+        }
+        break;
+      case "y":
+        if (numericValue !== undefined) {
+          attrs.y = numericValue;
+        }
+        break;
+      case "scale":
+        if (numericValue !== undefined) {
+          attrs.scale = numericValue;
+        }
+        break;
+      case "rotate":
+        if (numericValue !== undefined) {
+          attrs.rotate = numericValue;
+        }
+        break;
+      default:
+        break;
+    }
+    cursor += 1;
   }
 
   return { attrs, nextIndex: cursor };
+}
+
+function parseNumericAttribute(rawValue: string | undefined): number | undefined {
+  if (rawValue === undefined) {
+    return undefined;
+  }
+  const parsed = parseScalar(rawValue);
+  return typeof parsed === "number" ? parsed : undefined;
+}
+
+function isSupportedRegionAttributeKey(value: string): value is "x" | "y" | "scale" | "rotate" | "group" {
+  return value === "x" || value === "y" || value === "scale" || value === "rotate" || value === "group";
+}
+
+function isSupportedGroupAttributeKey(value: string): value is "id" | "x" | "y" | "scale" | "rotate" {
+  return value === "id" || value === "x" || value === "y" || value === "scale" || value === "rotate";
 }
 
 function countIndent(line: string): number {

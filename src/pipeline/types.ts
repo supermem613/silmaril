@@ -9,10 +9,26 @@ export interface SceneAttrs {
   canvas?: CanvasAttrs;
 }
 
+export interface RegionGroupAttrs {
+  id?: string;
+  x?: number;
+  y?: number;
+  scale?: number;
+  rotate?: number;
+}
+
+export interface RegionAttrs {
+  x?: number;
+  y?: number;
+  scale?: number;
+  rotate?: number;
+  group?: RegionGroupAttrs;
+}
+
 export interface SceneRegionIR {
   id: string;
   title: string;
-  attrs: Record<string, unknown>;
+  attrs: RegionAttrs;
   body: string;
   groupId: string | null;
   children: SceneRegionIR[];
