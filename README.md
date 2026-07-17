@@ -6,7 +6,7 @@ Silmaril compiles annotated Markdown into a deterministic single-file HTML canva
 
 - `doctor` verifies the local environment.
 - `schema` emits the machine-readable command catalog.
-- `build` writes a presentation and accepts `--out`, `--theme`, `--emit-scene`, and `--open`.
+- `build` writes a presentation and accepts `--out`, `--theme`, `--emit-scene`, and `--open`. Without `--out`, it writes `<source-name>.html` in the system temp directory.
 - `update` self-updates the checkout.
 
 ## Learn more
@@ -18,8 +18,10 @@ Silmaril compiles annotated Markdown into a deterministic single-file HTML canva
 ## Quick example
 
 ```bash
-node dist/cli.js build docs/examples/quick.md --out ./silmaril-quick.html --theme sketch
+node dist/cli.js build docs/examples/quick.md
 ```
+
+The frontmatter `theme` is used by default. Pass `--theme` to override it or `--out` to choose the output path.
 
 ## Showcase
 

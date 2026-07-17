@@ -93,12 +93,12 @@ export const commandSpecs: CommandSpec[] = [
         {
           name: "--out",
           type: "string",
-          summary: "Write the HTML build output to a file.",
+          summary: "Write the HTML build output to a file instead of the system temp directory.",
         },
         {
           name: "--theme",
           type: "string",
-          summary: "Select the render theme.",
+          summary: "Override the frontmatter render theme.",
           choices: ["cards", "atlas", "sketch"],
         },
         emitSceneCapability,
@@ -114,7 +114,7 @@ export const commandSpecs: CommandSpec[] = [
       schema: "BuildResult",
       coverage: ["filesystem", "stdout", "stderr"],
     },
-    examples: ["build slides.md --out slides.html --theme cards", "build slides.md --out slides.html --emit-scene"],
+    examples: ["build slides.md", "build slides.md --out slides.html --theme cards", "build slides.md --emit-scene"],
     readmeSummary: "build — Compile a markdown scene into a deterministic HTML presentation.",
     skillReferences: ["build", "render", "assemble"],
   },

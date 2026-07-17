@@ -37,8 +37,8 @@ program
 program
   .command("build <input>")
   .description("Compile a markdown scene into a deterministic HTML presentation")
-  .option("--out <file>", "Write the build output to a file")
-  .option("--theme <theme>", "Select the render theme", "cards")
+  .option("--out <file>", "Write the build output to a file instead of the system temp directory")
+  .option("--theme <theme>", "Override the frontmatter render theme")
   .option("--emit-scene", "Emit the parsed scene IR as stable JSON")
   .option("--open", "Open the generated HTML in the default application")
   .action(async (input: string, opts: { out?: string; theme?: string; emitScene?: boolean; open?: boolean }) => {

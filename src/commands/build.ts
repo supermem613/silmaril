@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { basename, dirname, extname, isAbsolute, join, resolve } from "node:path";
 import { emitJsonFailure, emitJsonSuccess } from "../output.js";
 import { parseScene } from "../pipeline/parse.js";
 import { layoutScene } from "../pipeline/layout.js";
@@ -32,6 +33,11 @@ function normalizeOutputPath(outputPath: string): string {
   return isAbsolute(outputPath) ? outputPath : resolve(process.cwd(), outputPath);
 }
 
+function defaultOutputPath(inputPath: string): string {
+  const sourceName = basename(inputPath, extname(inputPath));
+  return join(tmpdir(), `${sourceName}.html`);
+}
+
 export function requestOpenOutput(
   outputPath: string,
   openOutput: OpenOutput,
@@ -61,20 +67,16 @@ export async function buildCommand(input: string, opts: BuildOptions, deps: Buil
 
   let tempPath: string | null = null;
   try {
-    if (!opts.out) {
-      throw buildError("--out is required for HTML writes");
-    }
-
-    const outputPath = normalizeOutputPath(opts.out);
-    const themeName = opts.theme ?? "cards";
+    const inputPath = isAbsolute(input) ? input : resolve(process.cwd(), input);
+    const outputPath = opts.out ? normalizeOutputPath(opts.out) : defaultOutputPath(inputPath);
+    const inputDirectory = dirname(inputPath);
+    const markdown = readFileSync(inputPath, "utf8");
+    const scene = parseScene(markdown);
+    const themeName = opts.theme ?? scene.theme ?? "cards";
     if (themeName !== "cards" && themeName !== "atlas" && themeName !== "sketch") {
       throw buildError("--theme must be one of cards, atlas, sketch");
     }
 
-    const inputPath = isAbsolute(input) ? input : resolve(process.cwd(), input);
-    const inputDirectory = dirname(inputPath);
-    const markdown = readFileSync(inputPath, "utf8");
-    const scene = parseScene(markdown);
     const theme = getTheme(themeName);
     const sceneSteps = scene.regions.map((region) => ({
       id: region.id,

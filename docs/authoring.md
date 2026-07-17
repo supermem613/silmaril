@@ -19,7 +19,7 @@ canvas:
 Supported frontmatter keys:
 
 - `title`: string, used for the scene identifier and title fallback.
-- `theme`: string, parsed as metadata for the scene; the current CLI build command still selects the theme with `--theme`.
+- `theme`: `cards`, `atlas`, or `sketch`. The CLI uses this value unless `--theme` overrides it.
 - `canvas.width` and `canvas.height`: positive numbers for the scene canvas dimensions.
 
 The parser accepts simple scalars (`true`, `false`, `null`, strings, numbers) and nested objects. Arrays are not part of the current grammar.
@@ -72,13 +72,15 @@ This means:
 
 ## 5. Themes
 
-The `build` command accepts three themes through `--theme`:
+The `build` command accepts three themes through frontmatter or `--theme`:
 
 - `cards`: a bold card stack with a dark background.
 - `atlas`: a map-like canvas with an overview and pinned regions.
 - `sketch`: a hand-drawn look with a sketch-font asset and a lighter palette.
 
 The sketch theme is a good option for quick authoring because it makes the canvas feel visual without extra setup.
+
+If neither frontmatter nor `--theme` selects a theme, Silmaril uses `cards`. An explicit `--theme` always wins over frontmatter.
 
 ## 6. Determinism and self-hosting
 
@@ -92,7 +94,7 @@ Use the CLI to validate and build your scene:
 
 - `doctor` checks the local environment.
 - `schema` prints the public command catalog.
-- `build` writes the HTML presentation.
+- `build` writes the HTML presentation. Without `--out`, the file is named after the markdown source and written to the operating system temp directory.
 - `update` self-updates the checkout.
 
 The CLI supports global `--help` and `--version` flags. The `build` command adds `--emit-scene` for inspecting the parsed scene IR.

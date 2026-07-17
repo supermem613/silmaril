@@ -2,7 +2,7 @@ import { strict as assert } from "node:assert";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { afterEach, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { requestOpenOutput } from "../../src/commands/build.js";
@@ -31,10 +31,14 @@ function writeTempMarkdown(dir: string, name: string, content: string): string {
 
 describe("cli contract", () => {
   const tempDirs: string[] = [];
+  const tempFiles: string[] = [];
 
   afterEach(() => {
     for (const dir of tempDirs.splice(0)) {
       rmSync(dir, { recursive: true, force: true });
+    }
+    for (const file of tempFiles.splice(0)) {
+      rmSync(file, { force: true });
     }
   });
 
@@ -124,6 +128,30 @@ describe("cli contract", () => {
     assert.match(html, /step-card/i);
   });
 
+  it("uses the frontmatter theme unless an explicit theme overrides it", () => {
+    const dir = mkdtempSync(join(tmpdir(), "silmaril-build-"));
+    tempDirs.push(dir);
+    const markdownPath = writeTempMarkdown(
+      dir,
+      "scene.md",
+      "---\ntitle: Demo\ntheme: sketch\n---\n\n- Alpha\n  - body\n",
+    );
+    const frontmatterOutPath = join(dir, "frontmatter.html");
+    const overrideOutPath = join(dir, "override.html");
+
+    const frontmatterBuild = runCli(["build", markdownPath, "--out", frontmatterOutPath]);
+    assert.equal(frontmatterBuild.status, 0, frontmatterBuild.stderr || frontmatterBuild.stdout);
+    const frontmatterPayload = readJson(frontmatterBuild.stdout) as { data: { theme: string } };
+    assert.equal(frontmatterPayload.data.theme, "sketch");
+    assert.match(readFileSync(frontmatterOutPath, "utf8"), /sketch-scene/);
+
+    const overrideBuild = runCli(["build", markdownPath, "--out", overrideOutPath, "--theme", "atlas"]);
+    assert.equal(overrideBuild.status, 0, overrideBuild.stderr || overrideBuild.stdout);
+    const overridePayload = readJson(overrideBuild.stdout) as { data: { theme: string } };
+    assert.equal(overridePayload.data.theme, "atlas");
+    assert.match(readFileSync(overrideOutPath, "utf8"), /atlas-scene/);
+  });
+
   it("inlines local images relative to the markdown source", () => {
     const dir = mkdtempSync(join(tmpdir(), "silmaril-build-"));
     tempDirs.push(dir);
@@ -170,20 +198,26 @@ describe("cli contract", () => {
     assert.equal(payload.hint, "Remote asset reference is not allowed: https://example.com/diagram.png");
   });
 
-  it("requires --out and leaves no output on invalid options", () => {
+  it("writes to a source-named file in the operating system temp directory when --out is omitted", () => {
     const dir = mkdtempSync(join(tmpdir(), "silmaril-build-"));
     tempDirs.push(dir);
-    const markdownPath = writeTempMarkdown(dir, "scene.md", "---\ntitle: Demo\n---\n\n- Alpha\n  - body\n");
-    const outPath = join(dir, "scene.html");
+    const sourceName = basename(dir);
+    const markdownPath = writeTempMarkdown(dir, `${sourceName}.md`, "---\ntitle: Demo\n---\n\n- Alpha\n  - body\n");
+    const outPath = join(tmpdir(), `${sourceName}.html`);
+    tempFiles.push(outPath);
 
-    const build = runCli(["build", markdownPath, "--theme", "invalid"]);
-    assert.equal(build.status, 1, build.stderr || build.stdout);
-    const buildPayload = readJson(build.stdout) as { ok: boolean; command: string; error: string; hint: string };
-    assert.equal(buildPayload.ok, false);
+    const build = runCli(["build", markdownPath]);
+    assert.equal(build.status, 0, build.stderr || build.stdout);
+    const buildPayload = readJson(build.stdout) as {
+      ok: boolean;
+      command: string;
+      data: { outputPath: string; theme: string };
+    };
+    assert.equal(buildPayload.ok, true);
     assert.equal(buildPayload.command, "build");
-    assert.equal(buildPayload.error, "invalid-options");
-    assert.match(buildPayload.hint, /--out/i);
-    assert.equal(existsSync(outPath), false);
+    assert.equal(buildPayload.data.outputPath, outPath);
+    assert.equal(buildPayload.data.theme, "cards");
+    assert.ok(existsSync(outPath));
     assert.deepEqual(readdirSync(dir).filter((name) => name.endsWith(".html")), []);
   });
 

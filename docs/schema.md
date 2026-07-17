@@ -27,6 +27,8 @@ Silmaril exposes four public commands and a small set of JSON-oriented flags. Th
 - Effect: `mutate-local`
 - Positionals: `input`
 - Flags: `--out`, `--theme`, `--emit-scene`, `--open`
+- Output path: `--out` selects an explicit path. When omitted, Silmaril writes `<source-name>.html` in the operating system temp directory.
+- Theme: `--theme` overrides frontmatter `theme`; otherwise frontmatter wins, with `cards` as the final default.
 - Exit: `0` on success; `1` when options are invalid or the build fails.
 - Output envelope: success uses `{"ok":true,"command":"build","data":{"outputPath":...,"byteCount":...,"theme":...},"warnings":[]}`; failure uses `{"ok":false,"command":"build","error":"invalid-options|build-failed","hint":"..."}`.
 
@@ -65,7 +67,7 @@ The `warnings` array is currently empty for the shipped commands. `stderr` carri
 silmaril doctor --json
 silmaril schema
 silmaril schema doctor --summary
-silmaril build docs/examples/quick.md --out ./silmaril-quick.html --theme sketch
+silmaril build docs/examples/quick.md
 silmaril update --json
 ```
 
