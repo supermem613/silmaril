@@ -36,19 +36,34 @@ After the frontmatter, write one region per top-level bullet list item. The regi
   Zoom in for supporting evidence.
 ```
 
-The parser treats the first body paragraph as markdown content and preserves the order of regions. It also captures nested attribute blocks such as `group` and `x`, `y`, `scale`, `rotate` when they appear under a region.
+The parser treats the body as markdown content and preserves region order. Use an explicit `@silmaril` block for placement metadata:
+
+```md
+- Detail
+  - @silmaril:
+    - x: 1700
+    - y: -150
+    - scale: 1
+    - rotate: 6
+  ## Slides are a line. Ideas are a place.
+
+  Keep **spatial context** while you present.
+```
+
+Ordinary bullets containing colons remain presentation content. Legacy `x`, `y`, `scale`, `rotate`, and `group` bullets are still accepted for compatibility.
 
 ## 3. Grouping and layout
 
-Use a nested `group` block to keep regions together:
+Use a nested group inside `@silmaril` to keep regions together:
 
 ```md
 - Overview
   Open the scene with a map-like overview.
 
 - Detail
-  - group:
-    - id: evidence
+  - @silmaril:
+    - group:
+      - id: evidence
   Add a focused detail card.
 ```
 
@@ -58,7 +73,7 @@ The current public build path uses deterministic auto-layout:
 - grouped regions render after the overview in the order they appear;
 - the default grid is 3 columns with a 24px gap.
 
-Manual placement values such as `x`, `y`, `scale`, and `rotate` are parsed into the scene IR, but the current CLI build path does not apply them from markdown. If you need manual placement today, use the programmatic layout API rather than the `build` command.
+Manual `x`, `y`, `scale`, and `rotate` values flow through the public `build` command. Sparse placement is supported: author only the fields you want to override and the theme keeps its values for the rest.
 
 ## 4. Markdown body rules
 
@@ -74,11 +89,15 @@ This means:
 
 The `build` command accepts three themes through frontmatter or `--theme`:
 
-- `cards`: a bold card stack with a dark background.
-- `atlas`: a map-like canvas with an overview and pinned regions.
-- `sketch`: a hand-drawn look with a sketch-font asset and a lighter palette.
+- `cards`: dark presentation cards with authored semantic emphasis and a zoomed-out map anchor.
+- `atlas`: parchment location cards over one shared illustrated world.
+- `sketch`: camera targets across one shared hand-drawn board.
 
-The sketch theme is a good option for quick authoring because it makes the canvas feel visual without extra setup.
+The repository showcase sources demonstrate the richer conventions for each accepted presentation:
+
+- [cards-tour.md](../examples/cards-tour.md)
+- [atlas-tour.md](../examples/atlas-tour.md)
+- [sketch-tour.md](../examples/sketch-tour.md)
 
 If neither frontmatter nor `--theme` selects a theme, Silmaril uses `cards`. An explicit `--theme` always wins over frontmatter.
 

@@ -33,7 +33,7 @@ async function loadDistModule() {
   const absolute = path.resolve(scriptDir, '../dist/index.js');
   try {
     return await import(pathToFileURL(absolute).href);
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -86,7 +86,7 @@ async function main() {
   let args;
   try {
     args = parseArgs(process.argv.slice(2));
-  } catch (error) {
+  } catch {
     process.stdout.write(JSON.stringify({ totalMs: null, outBytes: 0 }));
     return;
   }

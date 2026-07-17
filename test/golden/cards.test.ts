@@ -25,6 +25,9 @@ interface CardsRouteProjection {
 
 interface CardsThemeProjection {
   readonly css: string;
+  readonly fallback: string;
+  readonly hint: string;
+  readonly impressAttributes: string;
   readonly routes: readonly CardsRouteProjection[];
 }
 
@@ -102,6 +105,11 @@ function projectCardsTheme(html: string): CardsThemeProjection {
   const canonical = canonicalizeHtml(html);
   const css = canonical.match(/<style>([\s\S]*?)<\/style>/i)?.[1]?.trim();
   assert.ok(css, 'expected an inline cards theme style block');
+  const fallback = canonical.match(/<div class=["']fallback-message["']>([\s\S]*?)<\/div>/i)?.[0];
+  const hint = canonical.match(/<div class=["']hint["']>([\s\S]*?)<\/div>/i)?.[0];
+  const impressAttributes = canonical.match(/<div id=["']impress["']([^>]*)>/i)?.[1]?.trim() ?? '';
+  assert.ok(fallback, 'expected the cards fallback message');
+  assert.ok(hint, 'expected the cards navigation hint');
 
   const starts = [...canonical.matchAll(/<div\b([^>]*\bclass=["']([^"']*)["'][^>]*)>/gi)]
     .filter((match) => (match[2] ?? '').split(/\s+/).includes('step'))
@@ -113,13 +121,14 @@ function projectCardsTheme(html: string): CardsThemeProjection {
 
   const routes = starts.flatMap((start, index): CardsRouteProjection[] => {
     const id = readAttribute(start.attributes, 'data-id') ?? readAttribute(start.attributes, 'id');
-    if (!id || id === 'overview') {
+    if (!id) {
       return [];
     }
 
-    const end = starts[index + 1]?.start ?? canonical.indexOf('</div>', start.contentStart);
-    const segment = canonical.slice(start.contentStart, end);
-    const stepClose = segment.lastIndexOf('</div>');
+    const nextStart = starts[index + 1]?.start;
+    const directClose = canonical.indexOf('</div>', start.contentStart);
+    const segment = canonical.slice(start.contentStart, nextStart ?? directClose);
+    const stepClose = nextStart === undefined ? segment.length : segment.lastIndexOf('</div>');
     assert.notEqual(stepClose, -1, `expected closing markup for cards route ${id}`);
     const content = normalizeRegionMarkup(unwrapGeneratedStepCard(segment.slice(0, stepClose)));
 
@@ -133,7 +142,13 @@ function projectCardsTheme(html: string): CardsThemeProjection {
     }];
   });
 
-  return { css, routes };
+  return {
+    css,
+    fallback: normalizeRegionMarkup(fallback),
+    hint: normalizeRegionMarkup(hint),
+    impressAttributes,
+    routes,
+  };
 }
 
 test('renders the accepted cards theme projection', () => {

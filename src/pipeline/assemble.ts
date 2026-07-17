@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import type { Theme, ThemeLayoutPlacement, ThemePlacementPatch, ThemeRegionDescriptor } from '../theme/contract.js';
+import type { Theme, ThemeLayoutPlacement, ThemeOverview, ThemePlacementPatch, ThemeRegionDescriptor } from '../theme/contract.js';
 import { renderTemplate, type TemplateStep } from './template.js';
 
 export const SILMARIL_NOT_IMPLEMENTED_ASSEMBLE = 'SILMARIL_NOT_IMPLEMENTED_ASSEMBLE';
@@ -87,6 +87,7 @@ function renderRegionContent(theme: Theme, region: ThemeRegionDescriptor): strin
 }
 
 function createStep(theme: Theme, region: ThemeRegionDescriptor, placement: ThemeLayoutPlacement): TemplateStep {
+  const rendered = renderRegionContent(theme, region);
   return {
     id: placement.id,
     title: placement.title,
@@ -95,7 +96,23 @@ function createStep(theme: Theme, region: ThemeRegionDescriptor, placement: Them
     z: placement.z ?? 0,
     scale: placement.scale,
     rotate: placement.rotate,
-    content: `<div class="step-card">${renderRegionContent(theme, region)}</div>`,
+    content: theme.wrapRegion === false ? rendered : `<div class="step-card">${rendered}</div>`,
+    className: theme.stepClassName?.(region, { theme }),
+  };
+}
+
+function createOverviewStep(overview: ThemeOverview | undefined): TemplateStep {
+  return {
+    id: overview?.id ?? 'overview',
+    title: overview?.title ?? 'Overview',
+    x: overview?.x ?? 0,
+    y: overview?.y ?? 0,
+    z: overview?.z ?? 0,
+    scale: overview?.scale ?? 4,
+    rotate: overview?.rotate,
+    content: overview?.content ?? '',
+    overview: true,
+    className: overview?.className,
   };
 }
 
@@ -114,19 +131,12 @@ export function assemble(theme: Theme, regions: readonly Region[]): string {
   const placements = resolveLayout(theme, descriptors);
   const steps = descriptors.map((region, index) => createStep(theme, region, placements[index] ?? createFallbackPlacement(region, index)));
 
-  steps.push({
-    id: 'overview',
-    title: 'Overview',
-    x: 0,
-    y: 0,
-    z: 0,
-    scale: 4,
-    content: '',
-    overview: true,
-  });
+  if (theme.overview !== false) {
+    steps.push(createOverviewStep(theme.overview));
+  }
 
   return renderTemplate({
-    title: 'Zoomable Canvas',
+    title: theme.title ?? 'Zoomable Canvas',
     theme,
     steps,
     impressScript: getImpressScript(),

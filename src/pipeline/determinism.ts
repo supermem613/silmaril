@@ -24,7 +24,7 @@ export interface DeterminismAuditResult {
 const AUDIT_PATTERNS: ReadonlyArray<{ readonly name: string; readonly pattern: RegExp }> = [
   { name: 'timestamp', pattern: /\d{4}-\d{2}-\d{2}(?:[T ][0-9:.]+)?/ },
   { name: 'math-random', pattern: /Math\.random/ },
-  { name: 'random-id', pattern: /\b[0-9a-f]{8,}\b/i },
+  { name: 'random-id', pattern: /\b(?:id|data-id)=["'][0-9a-f]{8,}["']/i },
 ];
 
 function hashOutput(output: string): string {

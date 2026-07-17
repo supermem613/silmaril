@@ -28,15 +28,39 @@ export interface ThemeAsset {
   readonly type?: 'css' | 'script' | 'font' | 'image' | 'svg' | 'text';
 }
 
+export interface ThemeOverview {
+  readonly id?: string;
+  readonly title?: string;
+  readonly x: number;
+  readonly y: number;
+  readonly z?: number;
+  readonly scale: number;
+  readonly rotate?: number;
+  readonly content?: string;
+  readonly className?: string;
+}
+
 export interface Theme {
   readonly name: string;
+  readonly title?: string;
   readonly backgroundColor?: string;
   readonly accentColor?: string;
+  readonly bodyClass?: string;
+  readonly viewport?: string;
+  readonly fallbackHtml?: string;
+  readonly hintHtml?: string;
+  readonly impressAttributes?: Readonly<Record<string, string | number>>;
   readonly globalCss?: string;
   readonly sceneryCss?: string;
   readonly regionCss?: string;
   readonly css?: string;
   readonly scenery?: string;
+  readonly wrapRegion?: boolean;
+  readonly overview?: ThemeOverview | false;
+  readonly stepClassName?: (
+    region: ThemeRegionDescriptor,
+    context: { readonly theme: Theme },
+  ) => string | undefined;
   readonly renderRegion?: (
     region: ThemeRegionDescriptor,
     context: { readonly theme: Theme },

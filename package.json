@@ -1,11 +1,17 @@
 {
   "name": "silmaril",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Compile annotated Markdown into a deterministic single-file zoomable-canvas HTML presentation",
   "type": "module",
   "bin": {
     "silmaril": "./dist/cli.js"
   },
+  "files": [
+    "assets",
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "prebuild": "eslint src/ test/ && tsc --noEmit -p test/tsconfig.json",
     "build": "tsc",

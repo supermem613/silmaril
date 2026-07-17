@@ -10,6 +10,7 @@ export interface TemplateStep {
   readonly rotate?: number;
   readonly content: string;
   readonly overview?: boolean;
+  readonly className?: string;
 }
 
 export interface TemplateOptions {
@@ -48,7 +49,7 @@ export function renderTemplate(options: TemplateOptions): string {
   const styleBlock = [assetCss, styles].filter((value) => value.length > 0).join('\n');
   const stepMarkup = options.steps
     .map((step) => {
-      const classNames = ['step', step.overview ? 'overview' : ''].filter(Boolean).join(' ');
+      const classNames = ['step', step.overview ? 'overview' : '', step.className ?? ''].filter(Boolean).join(' ');
       const attributes = [
         `data-x="${step.x}"`,
         `data-y="${step.y}"`,
@@ -75,6 +76,24 @@ export function renderTemplate(options: TemplateOptions): string {
     `<script>${options.impressScript}</script>`,
     '<script>window.impress && window.impress.init && window.impress.init();</script>',
   ].join('\n');
+  const viewport = options.theme.viewport
+    ? `\n    <meta name="viewport" content="${escapeHtml(options.theme.viewport)}" />`
+    : '';
+  const bodyClass = options.theme.bodyClass
+    ? ` class="${escapeHtml(options.theme.bodyClass)}"`
+    : '';
+  const impressAttributes = Object.entries(options.theme.impressAttributes ?? {})
+    .map(([name, value]) => ` data-${escapeHtml(name)}="${escapeHtml(String(value))}"`)
+    .join('');
+  const scenery = options.theme.scenery?.trim()
+    ? `\n${options.theme.scenery.trim()}`
+    : '';
+  const fallback = options.theme.fallbackHtml?.trim()
+    ? `\n    ${options.theme.fallbackHtml.trim()}`
+    : '';
+  const hint = options.theme.hintHtml?.trim()
+    ? `\n    ${options.theme.hintHtml.trim()}`
+    : '';
 
-  return `<!doctype html>\n<html lang="en">\n  <head>\n    <meta charset="utf-8" />\n    <title>${escapeHtml(options.title)}</title>${styleBlock ? `\n    <style>\n${styleBlock}\n    </style>` : ''}\n  </head>\n  <body>\n    <div id="impress">\n${stepMarkup}\n    </div>\n${scripts}\n  </body>\n</html>\n`;
+  return `<!doctype html>\n<html lang="en">\n  <head>\n    <meta charset="utf-8" />${viewport}\n    <title>${escapeHtml(options.title)}</title>${styleBlock ? `\n    <style>\n${styleBlock}\n    </style>` : ''}\n  </head>\n  <body${bodyClass}>${fallback}\n    <div id="impress"${impressAttributes}>${scenery}\n${stepMarkup}\n    </div>${hint}\n${scripts}\n  </body>\n</html>\n`;
 }

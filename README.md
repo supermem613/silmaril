@@ -25,11 +25,20 @@ The frontmatter `theme` is used by default. Pass `--theme` to override it or `--
 
 ## Showcase
 
-The same source drives three deterministic repository examples:
+Each theme ships with the annotated Markdown that produces its accepted presentation:
 
-- Shared source: [examples/silmaril-tour.md](examples/silmaril-tour.md)
-- Cards theme: [examples/cards.html](examples/cards.html)
-- Atlas theme: [examples/atlas.html](examples/atlas.html)
-- Sketch theme: [examples/sketch.html](examples/sketch.html)
+| Theme | Markdown source | Generated presentation |
+| --- | --- | --- |
+| Cards | [examples/cards-tour.md](examples/cards-tour.md) | [examples/cards.html](examples/cards.html) |
+| Atlas | [examples/atlas-tour.md](examples/atlas-tour.md) | [examples/atlas.html](examples/atlas.html) |
+| Sketch | [examples/sketch-tour.md](examples/sketch-tour.md) | [examples/sketch.html](examples/sketch.html) |
+
+```bash
+silmaril build examples/cards-tour.md --out examples/cards.html
+silmaril build examples/atlas-tour.md --out examples/atlas.html
+silmaril build examples/sketch-tour.md --out examples/sketch.html
+```
+
+The theme comes from each file's frontmatter. An explicit `--theme` still wins.
 
 Use `--help` or `--version` for CLI metadata. `doctor` and `schema` emit JSON by default; `update --json` selects its machine-readable envelope.

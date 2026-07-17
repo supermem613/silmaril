@@ -76,7 +76,7 @@ describe("cli contract", () => {
     assert.equal(schemaPayload.ok, true);
     assert.equal(schemaPayload.command, "schema");
     assert.equal(schemaPayload.data.schemaVersion, 1);
-    assert.equal(schemaPayload.data.cliVersion, "0.1.0");
+    assert.equal(schemaPayload.data.cliVersion, "0.2.0");
     assert.equal(schemaPayload.data.envelope.stdout, "JSON only for non-interactive commands when --json or schema is used");
     assert.deepEqual(schemaPayload.data.envelope.successEnvelope, ["ok", "command", "data", "warnings"]);
     assert.deepEqual(schemaPayload.data.envelope.errorEnvelope, ["ok", "command", "error", "hint"]);
@@ -125,7 +125,8 @@ describe("cli contract", () => {
     const html = readFileSync(outPath, "utf8");
     assert.match(html, /<html/i);
     assert.match(html, /<body/i);
-    assert.match(html, /step-card/i);
+    assert.match(html, /<h2>Alpha<\/h2>/i);
+    assert.match(html, /data-id="overview"[^>]*data-scale="7"/i);
   });
 
   it("uses the frontmatter theme unless an explicit theme overrides it", () => {
@@ -143,13 +144,15 @@ describe("cli contract", () => {
     assert.equal(frontmatterBuild.status, 0, frontmatterBuild.stderr || frontmatterBuild.stdout);
     const frontmatterPayload = readJson(frontmatterBuild.stdout) as { data: { theme: string } };
     assert.equal(frontmatterPayload.data.theme, "sketch");
-    assert.match(readFileSync(frontmatterOutPath, "utf8"), /sketch-scene/);
+    assert.match(readFileSync(frontmatterOutPath, "utf8"), /<div id="world">/);
+    assert.match(readFileSync(frontmatterOutPath, "utf8"), /<h2 style="font-size:48px[^"]*">Alpha<\/h2>/);
 
     const overrideBuild = runCli(["build", markdownPath, "--out", overrideOutPath, "--theme", "atlas"]);
     assert.equal(overrideBuild.status, 0, overrideBuild.stderr || overrideBuild.stdout);
     const overridePayload = readJson(overrideBuild.stdout) as { data: { theme: string } };
     assert.equal(overridePayload.data.theme, "atlas");
-    assert.match(readFileSync(overrideOutPath, "utf8"), /atlas-scene/);
+    assert.match(readFileSync(overrideOutPath, "utf8"), /<div id="world">/);
+    assert.match(readFileSync(overrideOutPath, "utf8"), /<h2>Alpha<\/h2>/);
   });
 
   it("inlines local images relative to the markdown source", () => {

@@ -254,11 +254,26 @@ function renderPlainRegion(region: ThemeRegionDescriptor): string {
 export function cardsTheme(): Theme {
   return {
     name: 'cards',
+    title: 'Zoomable Canvas — Spike',
     backgroundColor: '#0a0f1a',
     accentColor: '#5ec8ff',
+    bodyClass: 'impress-not-supported',
+    viewport: 'width=1024, minimum-scale=1, maximum-scale=1, user-scalable=no',
+    fallbackHtml: '<div class="fallback-message"><p><strong>Your browser doesn\'t support CSS 3D transforms.</strong></p><p>Open <code>talk.html</code> in a recent Edge, Chrome, or Firefox.</p></div>',
+    hintHtml: '<div class="hint"><kbd>Space</kbd>/<kbd>→</kbd> next · <kbd>←</kbd> back · <kbd>Tab</kbd> overview · <kbd>H</kbd> help · <kbd>F</kbd> fullscreen</div>',
+    impressAttributes: {
+      'transition-duration': 900,
+    },
     globalCss: cardsGlobalCss,
     sceneryCss: cardsSceneryCss,
     regionCss: cardsRegionCss,
+    wrapRegion: false,
+    overview: {
+      x: 850,
+      y: 150,
+      scale: 7,
+      content: '<h1>The whole map</h1><p class="lede">Press <kbd>Space</kbd> to start · this is the zoom-out anchor</p>',
+    },
     layout(regions) {
       return regions.map((region, index) => createPlacement(region, index));
     },

@@ -8,7 +8,6 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const cliPath = join(repoRoot, 'dist', 'cli.js');
-const sourcePath = join(repoRoot, 'examples', 'silmaril-tour.md');
 const themes = ['cards', 'atlas', 'sketch'] as const;
 
 function readJsonEnvelope(stdout: string) {
@@ -31,6 +30,7 @@ test('rebuilds example themes into exact golden HTML', () => {
   for (const theme of themes) {
     const tempDir = mkdtempSync(join(tmpdir(), `silmaril-example-${theme}-`));
     const outputPath = join(tempDir, `${theme}.html`);
+    const sourcePath = join(repoRoot, 'examples', `${theme}-tour.md`);
 
     try {
       const build = spawnSync(process.execPath, [cliPath, 'build', sourcePath, '--out', outputPath, '--theme', theme], {
