@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import type { Theme, ThemeLayoutPlacement, ThemeRegionDescriptor } from '../theme/contract.js';
+import type { Theme, ThemeLayoutPlacement, ThemePlacementPatch, ThemeRegionDescriptor } from '../theme/contract.js';
 import { renderTemplate, type TemplateStep } from './template.js';
 
 export const SILMARIL_NOT_IMPLEMENTED_ASSEMBLE = 'SILMARIL_NOT_IMPLEMENTED_ASSEMBLE';
@@ -8,6 +8,10 @@ export interface Region {
   readonly id: string;
   readonly title: string;
   readonly content: string;
+  readonly x?: number;
+  readonly y?: number;
+  readonly scale?: number;
+  readonly rotate?: number;
 }
 
 function getImpressScript(): string {
@@ -19,11 +23,15 @@ function toThemeRegion(region: Region): ThemeRegionDescriptor {
     id: region.id,
     title: region.title,
     content: region.content,
+    x: region.x,
+    y: region.y,
+    scale: region.scale,
+    rotate: region.rotate,
   };
 }
 
-function defaultLayout(regions: readonly ThemeRegionDescriptor[]): readonly ThemeLayoutPlacement[] {
-  return regions.map((region, index) => ({
+function createFallbackPlacement(region: ThemeRegionDescriptor, index: number): ThemeLayoutPlacement {
+  return {
     id: region.id,
     title: region.title,
     x: index * 1000,
@@ -31,7 +39,28 @@ function defaultLayout(regions: readonly ThemeRegionDescriptor[]): readonly Them
     z: 0,
     scale: 1,
     rotate: 0,
-  }));
+  };
+}
+
+function applyPlacementPatch(placement: ThemeLayoutPlacement, patch: ThemePlacementPatch): ThemeLayoutPlacement {
+  return {
+    ...placement,
+    x: patch.x ?? placement.x,
+    y: patch.y ?? placement.y,
+    scale: patch.scale ?? placement.scale ?? 1,
+    rotate: patch.rotate ?? placement.rotate ?? 0,
+  };
+}
+
+function buildPlacement(region: ThemeRegionDescriptor, index: number, themePlacement?: ThemeLayoutPlacement): ThemeLayoutPlacement {
+  const basePlacement = themePlacement ?? createFallbackPlacement(region, index);
+
+  return applyPlacementPatch(basePlacement, {
+    x: region.x,
+    y: region.y,
+    scale: region.scale,
+    rotate: region.rotate,
+  });
 }
 
 function resolveLayout(theme: Theme, regions: readonly ThemeRegionDescriptor[]): readonly ThemeLayoutPlacement[] {
@@ -41,20 +70,12 @@ function resolveLayout(theme: Theme, regions: readonly ThemeRegionDescriptor[]):
       const lookup = new Map(placements.map((placement) => [placement.id, placement]));
       return regions.map((region, index) => {
         const placement = lookup.get(region.id);
-        return {
-          id: region.id,
-          title: region.title,
-          x: placement?.x ?? index * 1000,
-          y: placement?.y ?? 0,
-          z: placement?.z ?? 0,
-          scale: placement?.scale ?? 1,
-          rotate: placement?.rotate ?? 0,
-        };
+        return buildPlacement(region, index, placement);
       });
     }
   }
 
-  return defaultLayout(regions);
+  return regions.map((region, index) => buildPlacement(region, index));
 }
 
 function renderRegionContent(theme: Theme, region: ThemeRegionDescriptor): string {
@@ -91,15 +112,7 @@ export function assemble(theme: Theme, regions: readonly Region[]): string {
   }
 
   const placements = resolveLayout(theme, descriptors);
-  const steps = descriptors.map((region, index) => createStep(theme, region, placements[index] ?? {
-    id: region.id,
-    title: region.title,
-    x: index * 1000,
-    y: 0,
-    z: 0,
-    scale: 1,
-    rotate: 0,
-  }));
+  const steps = descriptors.map((region, index) => createStep(theme, region, placements[index] ?? createFallbackPlacement(region, index)));
 
   steps.push({
     id: 'overview',

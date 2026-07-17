@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, extname, isAbsolute, join, resolve } from "node:path";
 import { emitJsonFailure, emitJsonSuccess } from "../output.js";
 import { parseScene } from "../pipeline/parse.js";
-import { layoutScene } from "../pipeline/layout.js";
+import { layoutScene, selectSparseLayoutPatch } from "../pipeline/layout.js";
 import { renderRegion } from "../pipeline/render.js";
 import { inlineMarkdown } from "../pipeline/inline.js";
 import { assemble } from "../pipeline/assemble.js";
@@ -82,14 +82,34 @@ export async function buildCommand(input: string, opts: BuildOptions, deps: Buil
       id: region.id,
       title: region.title,
       groupId: region.groupId,
+      x: region.attrs.x,
+      y: region.attrs.y,
+      scale: region.attrs.scale,
+      rotate: region.attrs.rotate,
     }));
-    layoutScene(sceneSteps);
+    const layout = layoutScene(sceneSteps);
+    const layoutPlacements = new Map(
+      [...layout.overview, ...layout.groups.flatMap((group) => group.steps)]
+        .map((placement) => [placement.id, placement]),
+    );
 
-    const renderedRegions = scene.regions.map((region) => ({
-      id: region.id,
-      title: region.title,
-      content: renderRegion(inlineMarkdown(region.body, inputDirectory).markdown),
-    }));
+    const renderedRegions = scene.regions.map((region) => {
+      const content = renderRegion(inlineMarkdown(region.body, inputDirectory).markdown);
+      const placement = layoutPlacements.get(region.id);
+      const authoredPatch = selectSparseLayoutPatch({
+        x: region.attrs.x === undefined ? undefined : placement?.x ?? region.attrs.x,
+        y: region.attrs.y === undefined ? undefined : placement?.y ?? region.attrs.y,
+        scale: region.attrs.scale === undefined ? undefined : placement?.scale ?? region.attrs.scale,
+        rotate: region.attrs.rotate === undefined ? undefined : placement?.rotate ?? region.attrs.rotate,
+      });
+
+      return {
+        id: region.id,
+        title: region.title,
+        content,
+        ...authoredPatch,
+      };
+    });
 
     const html = assemble(theme, renderedRegions);
     validateBuildOutput(html);

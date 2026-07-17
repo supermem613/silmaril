@@ -1,5 +1,6 @@
 import type {
   LayoutPatch,
+  LayoutPatchSource,
   LayoutPlacement,
   LayoutResult,
   LayoutSceneOptions,
@@ -48,6 +49,72 @@ function applyPatch(
   };
 }
 
+function mergeLayoutPatches(...patches: readonly (LayoutPatch | undefined)[]): LayoutPatch | undefined {
+  const merged: LayoutPatch = {};
+
+  for (const patch of patches) {
+    if (!patch) {
+      continue;
+    }
+
+    if (typeof patch.x === "number") {
+      merged.x = patch.x;
+    }
+    if (typeof patch.y === "number") {
+      merged.y = patch.y;
+    }
+    if (typeof patch.scale === "number") {
+      merged.scale = patch.scale;
+    }
+    if (typeof patch.rotate === "number") {
+      merged.rotate = patch.rotate;
+    }
+  }
+
+  return Object.keys(merged).length > 0 ? merged : undefined;
+}
+
+export function selectSparseLayoutPatch(source: LayoutPatchSource): LayoutPatch {
+  const patch: LayoutPatch = {};
+
+  if (typeof source.x === "number") {
+    patch.x = source.x;
+  }
+  if (typeof source.y === "number") {
+    patch.y = source.y;
+  }
+  if (typeof source.scale === "number") {
+    patch.scale = source.scale;
+  }
+  if (typeof source.rotate === "number") {
+    patch.rotate = source.rotate;
+  }
+
+  return patch;
+}
+
+function hasLayoutPatch(source: LayoutPatchSource): boolean {
+  return typeof source.x === "number"
+    || typeof source.y === "number"
+    || typeof source.scale === "number"
+    || typeof source.rotate === "number";
+}
+
+function buildPatch(step: LayoutStep, overrides: Readonly<Record<string, LayoutPatch>> | undefined): LayoutPatch | undefined {
+  const override = overrides?.[step.id];
+  const stepPatch = hasLayoutPatch(step) ? selectSparseLayoutPatch(step) : undefined;
+  const overridePatch = override && hasLayoutPatch(override) ? selectSparseLayoutPatch(override) : undefined;
+
+  if (!stepPatch) {
+    return overridePatch;
+  }
+  if (!overridePatch) {
+    return stepPatch;
+  }
+
+  return mergeLayoutPatches(stepPatch, overridePatch);
+}
+
 function buildPlacement(
   step: LayoutStep,
   index: number,
@@ -90,7 +157,7 @@ export function layoutScene(
 
   const overviewSteps = sceneSteps.filter((step) => step.groupId === null);
   const overview = overviewSteps.map((step, index) =>
-    applyPatch(buildPlacement(step, index, columns, gap, 0, null), overrides?.[step.id]),
+    applyPatch(buildPlacement(step, index, columns, gap, 0, null), buildPatch(step, overrides)),
   );
 
   const groupOrder: string[] = [];
@@ -114,7 +181,7 @@ export function layoutScene(
     const items = stepsInGroup.map((step, index) =>
       applyPatch(
         buildPlacement(step, index, columns, gap, groupIndex + 1, groupId),
-        overrides?.[step.id],
+        buildPatch(step, overrides),
       ),
     );
 

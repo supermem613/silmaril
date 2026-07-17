@@ -45,17 +45,24 @@ export interface SceneIR {
   html?: never;
 }
 
-export interface LayoutStep {
-  id: string;
-  title: string;
-  groupId: string | null;
-}
-
-export interface LayoutPatch {
+export interface LayoutPatchSource {
   x?: number;
   y?: number;
   scale?: number;
   rotate?: number;
+}
+
+export interface LayoutPatch extends LayoutPatchSource {
+  x?: number;
+  y?: number;
+  scale?: number;
+  rotate?: number;
+}
+
+export interface LayoutStep extends LayoutPatch {
+  id: string;
+  title: string;
+  groupId: string | null;
 }
 
 export interface LayoutPlacement {

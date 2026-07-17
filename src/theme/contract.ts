@@ -1,10 +1,17 @@
-export interface ThemeRegionDescriptor {
+export interface ThemePlacementPatch {
+  readonly x?: number;
+  readonly y?: number;
+  readonly scale?: number;
+  readonly rotate?: number;
+}
+
+export interface ThemeRegionDescriptor extends ThemePlacementPatch {
   readonly id: string;
   readonly title: string;
   readonly content: string;
 }
 
-export interface ThemeLayoutPlacement {
+export interface ThemeLayoutPlacement extends ThemePlacementPatch {
   readonly id: string;
   readonly title: string;
   readonly x: number;

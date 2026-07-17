@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import { strict as assert } from "node:assert";
 import {
   layoutScene,
+  selectSparseLayoutPatch,
   type LayoutPatch,
   type LayoutStep,
 } from "../../src/pipeline/layout.js";
@@ -63,6 +64,44 @@ describe("layoutScene", () => {
     assert.equal(result.groups[0]?.steps[0]?.rotate, 0);
     assert.equal(result.groups[1]?.steps[0]?.rotate, 90);
     assert.equal(result.groups[1]?.steps[0]?.x, 60);
+  });
+
+  it("preserves authored placement values for a step", () => {
+    const steps: readonly LayoutStep[] = [{ id: "intro", title: "Intro", groupId: null }];
+    const result = layoutScene(steps, {
+      gridColumns: 3,
+      gridGap: 24,
+      overrides: {
+        intro: { x: 11, y: 22, scale: 2.5, rotate: 45 },
+      },
+    });
+
+    assert.equal(result.overview[0]?.x, 11);
+    assert.equal(result.overview[0]?.y, 22);
+    assert.equal(result.overview[0]?.scale, 2.5);
+    assert.equal(result.overview[0]?.rotate, 45);
+  });
+
+  it("builds a sparse patch for an x-only authored step", () => {
+    const step: LayoutStep = { id: "intro", title: "Intro", groupId: null, x: 11 };
+    const patch = selectSparseLayoutPatch(step);
+
+    assert.deepEqual(patch, { x: 11 });
+
+    const result = layoutScene([step], {
+      gridColumns: 3,
+      gridGap: 24,
+    });
+
+    assert.deepEqual(result.overview[0], {
+      id: "intro",
+      title: "Intro",
+      x: 11,
+      y: 0,
+      scale: 1,
+      rotate: 0,
+      groupId: null,
+    });
   });
 
   it("uses a supplied themeLayout override", () => {
