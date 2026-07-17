@@ -1,5 +1,8 @@
+import { emitJsonSuccess } from "../output.js";
 import { buildSchema } from "../registry.js";
 
 export async function schemaCommand(pathArgs: string[], opts: { summary?: boolean }, cliVersion: string): Promise<void> {
-  process.stdout.write(JSON.stringify(buildSchema(cliVersion, pathArgs, opts.summary ?? false)) + "\n");
+  const payload = buildSchema(cliVersion, pathArgs, opts.summary ?? false);
+  emitJsonSuccess("schema", payload);
+  process.exit(0);
 }

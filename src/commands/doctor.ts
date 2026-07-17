@@ -1,4 +1,4 @@
-import chalk from "chalk";
+import { emitJsonFailure, emitJsonSuccess } from "../output.js";
 
 // CheckResult shape is the convention across rotunda/reflux/kash/sp-tools.
 // Keep it stable: tooling and `--json` consumers depend on it.
@@ -30,24 +30,16 @@ async function runChecks(): Promise<CheckResult[]> {
   ];
 }
 
-export async function doctorCommand(opts: { json?: boolean }): Promise<void> {
-  const results = await runChecks();
-  const allOk = results.every((r) => r.ok);
+export async function doctorCommand(_opts: { json?: boolean }): Promise<void> {
+  try {
+    const results = await runChecks();
+    const allOk = results.every((r) => r.ok);
 
-  if (opts.json) {
-    process.stdout.write(JSON.stringify({ ok: allOk, checks: results }, null, 2) + "\n");
+    emitJsonSuccess("doctor", { ok: allOk, checks: results });
     process.exit(allOk ? 0 : 1);
+  } catch (error) {
+    const hint = error instanceof Error ? error.message : String(error);
+    emitJsonFailure("doctor", "doctor-failed", hint);
+    process.exit(1);
   }
-
-  console.log(chalk.bold(`silmaril doctor\n`));
-  for (const r of results) {
-    const icon = r.ok ? chalk.green("✓") : chalk.red("✗");
-    console.log(`  ${icon} ${r.name.padEnd(20, ".")} ${r.detail}`);
-    if (!r.ok && r.hint) {
-      console.log(`      ${chalk.dim(r.hint)}`);
-    }
-  }
-  console.log();
-  console.log(allOk ? chalk.green("All checks passed.") : chalk.red("One or more checks failed."));
-  process.exit(allOk ? 0 : 1);
 }

@@ -3,11 +3,12 @@ import { strict as assert } from "node:assert";
 import { buildSchema } from "../../src/registry.js";
 
 describe("schema", () => {
-  it("lists the baseline commands", () => {
+  it("lists the public commands", () => {
     const schema = buildSchema("0.1.0") as { commands: Array<{ path: string[] }> };
     assert.deepEqual(schema.commands.map((command) => command.path), [
       ["doctor"],
       ["schema"],
+      ["build"],
       ["update"],
     ]);
   });

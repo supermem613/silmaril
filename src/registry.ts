@@ -1,4 +1,6 @@
-export type CommandEffect = "read" | "write" | "network" | "local";
+import type { CanvasAttrs, SceneAttrs, SceneIR } from "./pipeline/types.js";
+
+export type CommandEffect = "read" | "mutate-local" | "network" | "local";
 
 export type FlagType = "boolean" | "string" | "number";
 
@@ -7,6 +9,7 @@ export interface FlagSpec {
   type: FlagType;
   summary: string;
   default?: boolean | string | number;
+  choices?: readonly string[];
 }
 
 export interface CommandSpec {
@@ -20,9 +23,18 @@ export interface CommandSpec {
   output: {
     documented: boolean;
     schema?: string;
+    coverage?: string[];
   };
   examples: string[];
+  readmeSummary: string;
+  skillReferences: string[];
 }
+
+export const emitSceneCapability: FlagSpec = {
+  name: "--emit-scene",
+  type: "boolean",
+  summary: "Emit the parsed scene IR as stable JSON.",
+};
 
 export const commandSpecs: CommandSpec[] = [
   {
@@ -42,8 +54,11 @@ export const commandSpecs: CommandSpec[] = [
     output: {
       documented: true,
       schema: "HealthCheckResult[]",
+      coverage: ["stdout", "stderr"],
     },
     examples: ["doctor --json"],
+    readmeSummary: "doctor — Verify environment and configuration.",
+    skillReferences: ["doctor", "health-check"],
   },
   {
     path: ["schema"],
@@ -62,13 +77,51 @@ export const commandSpecs: CommandSpec[] = [
     output: {
       documented: true,
       schema: "CommandCatalog",
+      coverage: ["stdout", "stderr"],
     },
     examples: ["schema", "schema doctor --summary"],
+    readmeSummary: "schema — Emit the machine-readable command catalog.",
+    skillReferences: ["schema", "catalog"],
+  },
+  {
+    path: ["build"],
+    summary: "Compile a markdown scene into a deterministic HTML presentation.",
+    effect: "mutate-local",
+    input: {
+      positionals: ["input"],
+      flags: [
+        {
+          name: "--out",
+          type: "string",
+          summary: "Write the HTML build output to a file.",
+        },
+        {
+          name: "--theme",
+          type: "string",
+          summary: "Select the render theme.",
+          choices: ["cards", "atlas", "sketch"],
+        },
+        emitSceneCapability,
+        {
+          name: "--open",
+          type: "boolean",
+          summary: "Open the generated HTML in the default application.",
+        },
+      ],
+    },
+    output: {
+      documented: true,
+      schema: "BuildResult",
+      coverage: ["filesystem", "stdout", "stderr"],
+    },
+    examples: ["build slides.md --out slides.html --theme cards", "build slides.md --out slides.html --emit-scene"],
+    readmeSummary: "build — Compile a markdown scene into a deterministic HTML presentation.",
+    skillReferences: ["build", "render", "assemble"],
   },
   {
     path: ["update"],
     summary: "Self-update this silmaril checkout with git pull, npm install, and rebuild.",
-    effect: "write",
+    effect: "mutate-local",
     input: {
       positionals: [],
       flags: [
@@ -82,13 +135,66 @@ export const commandSpecs: CommandSpec[] = [
     output: {
       documented: true,
       schema: "UpdateResult",
+      coverage: ["stdout", "stderr", "filesystem"],
     },
     examples: ["update --json"],
+    readmeSummary: "update — Self-update this silmaril checkout with git pull, npm install, and rebuild.",
+    skillReferences: ["update", "self-update"],
   },
 ];
 
 function pathMatchesPrefix(path: string[], prefix: string[]): boolean {
   return prefix.every((part, index) => path[index] === part);
+}
+
+function sortStableValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => sortStableValue(entry));
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, entry]) => [key, sortStableValue(entry)]),
+    );
+  }
+  return value;
+}
+
+function stableScenePayload(scene: SceneIR): Record<string, unknown> {
+  const regions = scene.regions.map((region) => ({
+    id: region.id,
+    title: region.title,
+    attrs: sortStableValue(region.attrs),
+    body: region.body,
+    groupId: region.groupId,
+    children: region.children.map((child) => ({
+      id: child.id,
+      title: child.title,
+      attrs: sortStableValue(child.attrs),
+      body: child.body,
+      groupId: child.groupId,
+      children: [],
+    })),
+  }));
+
+  return {
+    id: scene.id,
+    rawMarkdown: scene.rawMarkdown,
+    attrs: sortStableValue(scene.attrs as SceneAttrs),
+    groupId: scene.groupId,
+    theme: scene.theme,
+    canvas: scene.canvas ? (sortStableValue(scene.canvas) as CanvasAttrs) : null,
+    regions,
+  };
+}
+
+export function emitSceneJson(scene: SceneIR): string {
+  return JSON.stringify(sortStableValue(stableScenePayload(scene)));
+}
+
+export function buildReadmeSummary(): string[] {
+  return commandSpecs.map((command) => command.readmeSummary);
 }
 
 export function buildSchema(cliVersion: string, pathPrefix: string[] = [], summary = false) {
@@ -123,7 +229,16 @@ export function buildSchema(cliVersion: string, pathPrefix: string[] = [], summa
         summary: "Show CLI version.",
       },
     ],
-    commands,
+    commands: commands.map((command) => ({
+      path: command.path,
+      summary: command.summary,
+      effect: command.effect,
+      input: command.input,
+      output: command.output,
+      examples: command.examples,
+      readmeSummary: command.readmeSummary,
+      skillReferences: command.skillReferences,
+    })),
     errorCodes: [],
     exitCodes: [
       {
