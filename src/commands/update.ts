@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { emitJsonError, emitJsonSuccess } from "../output.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -106,22 +107,18 @@ function writeHuman(result: UpdateResult): void {
   process.stdout.write("Pulled new changes. Dependencies installed. Build complete.\n");
 }
 
-function writeJson(value: unknown): void {
-  process.stdout.write(JSON.stringify(value) + "\n");
-}
-
 export async function updateCommand(opts: UpdateOptions = {}): Promise<void> {
   try {
     const result = await runSelfUpdate();
     if (opts.json) {
-      writeJson({ ok: true, command: "update", data: result });
+      emitJsonSuccess("update", { ok: true, data: result });
     } else {
       writeHuman(result);
     }
   } catch (err: unknown) {
     const hint = err instanceof Error ? err.message : String(err);
     if (opts.json) {
-      writeJson({ ok: false, command: "update", error: "UPDATE_FAILED", hint });
+      emitJsonError("update", "UPDATE_FAILED", hint);
     } else {
       process.stderr.write("silmaril update failed: " + hint + "\n");
     }
