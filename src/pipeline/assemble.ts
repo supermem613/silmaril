@@ -10,7 +10,9 @@ export interface Region {
   readonly content: string;
 }
 
-const impressScript = readFileSync(new URL('../../assets/vendor/impress.min.js', import.meta.url), 'utf8');
+function getImpressScript(): string {
+  return readFileSync(new URL('../../assets/vendor/impress.min.js', import.meta.url), 'utf8');
+}
 
 function toThemeRegion(region: Region): ThemeRegionDescriptor {
   return {
@@ -114,6 +116,6 @@ export function assemble(theme: Theme, regions: readonly Region[]): string {
     title: 'Zoomable Canvas',
     theme,
     steps,
-    impressScript,
+    impressScript: getImpressScript(),
   });
 }

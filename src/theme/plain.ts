@@ -1,8 +1,6 @@
 import { readFileSync } from 'node:fs';
 import type { Theme } from './contract.js';
 
-const kalamFontBase64 = readFileSync(new URL('../../assets/fonts/kalam.woff2.base64.txt', import.meta.url), 'utf8').trim();
-
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -13,6 +11,8 @@ function escapeHtml(value: string): string {
 }
 
 export function plainTheme(): Theme {
+  const kalamFontBase64 = readFileSync(new URL('../../assets/fonts/kalam.woff2.base64.txt', import.meta.url), 'utf8').trim();
+
   return {
     name: 'plain',
     backgroundColor: '#ffffff',
