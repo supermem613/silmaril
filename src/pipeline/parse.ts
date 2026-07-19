@@ -1,5 +1,5 @@
 import MarkdownIt from "markdown-it";
-import { type CanvasAttrs, type RegionAttrs, type RegionGroupAttrs, type SceneAttrs, type SceneIR, type SceneRegionIR } from "./types.js";
+import { type BoardIR, type CanvasAttrs, type RegionAttrs, type RegionGroupAttrs, type SceneAttrs, type SceneIR, type SceneRegionIR } from "./types.js";
 
 const markdownIt = new MarkdownIt({ html: false });
 
@@ -22,6 +22,136 @@ export function parseScene(markdown: string): SceneIR {
   };
 
   return scene;
+}
+
+export function parseHeadingBoard(markdown: string): BoardIR {
+  const { content, attrs } = parseFrontmatter(markdown);
+  const boardTitle = parseBoardTitle(content) ?? attrs.title ?? "Board";
+  const slides = parseHeadingBoardRegions(content);
+  const sceneAttrs: SceneAttrs = { ...attrs, title: boardTitle };
+  const theme = sceneAttrs.theme ?? null;
+  const canvas = sceneAttrs.canvas ?? null;
+
+  const scene: BoardIR = {
+    id: slugify(boardTitle),
+    rawMarkdown: markdown,
+    attrs: sceneAttrs,
+    groupId: null,
+    theme,
+    canvas,
+    regions: slides,
+    title: boardTitle,
+    slides,
+  };
+
+  return scene;
+}
+
+export const parseBoard = parseHeadingBoard;
+
+function parseBoardTitle(markdown: string): string | null {
+  const lines = markdown.split(/\r?\n/);
+  let inFence = false;
+  let fenceChar: string | null = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const fenceMatch = trimmed.match(/^(`{3,}|~{3,})/);
+
+    if (fenceMatch) {
+      const marker = fenceMatch[1][0];
+      if (!inFence) {
+        inFence = true;
+        fenceChar = marker;
+      } else if (fenceChar === marker) {
+        inFence = false;
+        fenceChar = null;
+      }
+      continue;
+    }
+
+    if (inFence) {
+      continue;
+    }
+
+    const match = line.match(/^#\s+(.*)$/);
+    if (match) {
+      return match[1].trim();
+    }
+  }
+
+  return null;
+}
+
+function parseHeadingBoardRegions(markdown: string): SceneRegionIR[] {
+  const lines = markdown.split(/\r?\n/);
+  const regions: SceneRegionIR[] = [];
+  const usedIds = new Map<string, number>();
+  let inFence = false;
+  let fenceChar: string | null = null;
+  let currentTitle: string | null = null;
+  let sectionStart = 0;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const trimmed = line.trim();
+    const fenceMatch = trimmed.match(/^(`{3,}|~{3,})/);
+
+    if (fenceMatch) {
+      const marker = fenceMatch[1][0];
+      if (!inFence) {
+        inFence = true;
+        fenceChar = marker;
+      } else if (fenceChar === marker) {
+        inFence = false;
+        fenceChar = null;
+      }
+      continue;
+    }
+
+    if (inFence) {
+      continue;
+    }
+
+    const headingMatch = line.match(/^##\s+(.*)$/);
+    if (!headingMatch) {
+      continue;
+    }
+
+    if (currentTitle !== null) {
+      const body = lines.slice(sectionStart, index).join("\n").replace(/\n+$/, "");
+      regions.push(createHeadingBoardRegion(currentTitle, body, usedIds));
+    }
+
+    currentTitle = headingMatch[1].trim();
+    sectionStart = index + 1;
+  }
+
+  if (currentTitle !== null) {
+    const body = lines.slice(sectionStart).join("\n").replace(/\n+$/, "");
+    regions.push(createHeadingBoardRegion(currentTitle, body, usedIds));
+  }
+
+  return regions;
+}
+
+function createHeadingBoardRegion(title: string, body: string, usedIds: Map<string, number>): SceneRegionIR {
+  return {
+    id: createHeadingBoardId(title, usedIds),
+    title,
+    attrs: {},
+    body,
+    groupId: null,
+    children: [],
+  };
+}
+
+function createHeadingBoardId(title: string, usedIds: Map<string, number>): string {
+  const baseId = slugify(title || "slide");
+  const count = usedIds.get(baseId) ?? 0;
+  const nextId = count === 0 ? baseId : `${baseId}-${count + 1}`;
+  usedIds.set(baseId, count + 1);
+  return nextId;
 }
 
 function parseFrontmatter(markdown: string): { content: string; attrs: SceneAttrs } {
