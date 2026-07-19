@@ -1,12 +1,14 @@
 import type { Theme } from './contract.js';
 import { atlasTheme } from './atlas/index.js';
 import { cardsTheme } from './cards/index.js';
+import { engineeringTheme } from './engineering/index.js';
 import { plainTheme } from './plain.js';
 import { sketchTheme } from './sketch/index.js';
 
 const themeFactories: Readonly<Record<string, () => Theme>> = {
   atlas: atlasTheme,
   cards: cardsTheme,
+  engineering: engineeringTheme,
   plain: plainTheme,
   sketch: sketchTheme,
 };

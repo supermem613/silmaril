@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, unlinkSync, wr
 import { tmpdir } from "node:os";
 import { basename, dirname, extname, isAbsolute, join, resolve } from "node:path";
 import { emitJsonFailure, emitJsonSuccess } from "../output.js";
-import { parseScene } from "../pipeline/parse.js";
+import { parseHeadingBoard, parseScene } from "../pipeline/parse.js";
 import { layoutScene, selectSparseLayoutPatch } from "../pipeline/layout.js";
 import { renderRegion } from "../pipeline/render.js";
 import { inlineMarkdown } from "../pipeline/inline.js";
@@ -73,12 +73,17 @@ export async function buildCommand(input: string, opts: BuildOptions, deps: Buil
     const markdown = readFileSync(inputPath, "utf8");
     const scene = parseScene(markdown);
     const themeName = opts.theme ?? scene.theme ?? "cards";
-    if (themeName !== "cards" && themeName !== "atlas" && themeName !== "sketch") {
-      throw buildError("--theme must be one of cards, atlas, sketch");
+    if (themeName !== "cards" && themeName !== "atlas" && themeName !== "sketch" && themeName !== "engineering") {
+      throw buildError("--theme must be one of cards, atlas, sketch, engineering");
     }
 
     const theme = getTheme(themeName);
-    const sceneSteps = scene.regions.map((region) => ({
+    const boardMode = themeName === "engineering";
+    const parsedBoard = boardMode ? parseHeadingBoard(markdown) : scene;
+    const regions = boardMode
+      ? (parsedBoard as ReturnType<typeof parseHeadingBoard>).slides
+      : (parsedBoard as ReturnType<typeof parseScene>).regions;
+    const sceneSteps = regions.map((region) => ({
       id: region.id,
       title: region.title,
       groupId: region.groupId,
@@ -93,7 +98,7 @@ export async function buildCommand(input: string, opts: BuildOptions, deps: Buil
         .map((placement) => [placement.id, placement]),
     );
 
-    const renderedRegions = scene.regions.map((region) => {
+    const renderedRegions = regions.map((region) => {
       const content = renderRegion(inlineMarkdown(region.body, inputDirectory).markdown);
       const placement = layoutPlacements.get(region.id);
       const authoredPatch = selectSparseLayoutPatch({
@@ -111,7 +116,10 @@ export async function buildCommand(input: string, opts: BuildOptions, deps: Buil
       };
     });
 
-    const html = assemble(theme, renderedRegions, { documentTitle: scene.attrs.title });
+    const documentTitle = boardMode
+      ? (parsedBoard as ReturnType<typeof parseHeadingBoard>).title
+      : (parsedBoard as ReturnType<typeof parseScene>).attrs.title;
+    const html = assemble(theme, renderedRegions, { documentTitle });
     validateBuildOutput(html);
 
     const outputDirectory = dirname(outputPath);
