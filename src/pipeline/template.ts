@@ -72,9 +72,8 @@ export function renderTemplate(options: TemplateOptions): string {
     .join('\n');
 
   const scripts = [
-    '<script>window.impress = window.impress || {};</script>',
     `<script>${options.impressScript}</script>`,
-    '<script>window.impress && window.impress.init && window.impress.init();</script>',
+    "<script>if (typeof window.impress === 'function') { window.impress().init(); }</script>",
   ].join('\n');
   const viewport = options.theme.viewport
     ? `\n    <meta name="viewport" content="${escapeHtml(options.theme.viewport)}" />`

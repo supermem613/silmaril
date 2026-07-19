@@ -19,6 +19,19 @@ test('test/unit/assemble.test.ts', () => {
   assert.equal(html, expectedDocument);
 });
 
+test('initializes impress through its public factory API', () => {
+  const html = assemble(plainTheme(), [{
+    id: 'only',
+    title: 'Only',
+    content: 'Body',
+  }]);
+
+  assert.match(
+    html,
+    /<script>if \(typeof window\.impress === 'function'\) \{ window\.impress\(\)\.init\(\); \}<\/script>/,
+  );
+});
+
 test('uses authored placement values in the rendered impress step', () => {
   const theme = plainTheme();
   const markdown = `---

@@ -25,7 +25,6 @@ interface CardsRouteProjection {
 
 interface CardsThemeProjection {
   readonly css: string;
-  readonly fallback: string;
   readonly hint: string;
   readonly impressAttributes: string;
   readonly routes: readonly CardsRouteProjection[];
@@ -105,10 +104,8 @@ function projectCardsTheme(html: string): CardsThemeProjection {
   const canonical = canonicalizeHtml(html);
   const css = canonical.match(/<style>([\s\S]*?)<\/style>/i)?.[1]?.trim();
   assert.ok(css, 'expected an inline cards theme style block');
-  const fallback = canonical.match(/<div class=["']fallback-message["']>([\s\S]*?)<\/div>/i)?.[0];
   const hint = canonical.match(/<div class=["']hint["']>([\s\S]*?)<\/div>/i)?.[0];
   const impressAttributes = canonical.match(/<div id=["']impress["']([^>]*)>/i)?.[1]?.trim() ?? '';
-  assert.ok(fallback, 'expected the cards fallback message');
   assert.ok(hint, 'expected the cards navigation hint');
 
   const starts = [...canonical.matchAll(/<div\b([^>]*\bclass=["']([^"']*)["'][^>]*)>/gi)]
@@ -144,7 +141,6 @@ function projectCardsTheme(html: string): CardsThemeProjection {
 
   return {
     css,
-    fallback: normalizeRegionMarkup(fallback),
     hint: normalizeRegionMarkup(hint),
     impressAttributes,
     routes,
@@ -195,6 +191,13 @@ test('renders the accepted cards theme projection', () => {
     projectCardsTheme(generatedHtml),
     projectCardsTheme(prototypeHtml),
     'the complete cards-controlled CSS, authored route transforms, and region markup must match the frozen prototype',
+  );
+});
+
+test('uses presentation-neutral fallback guidance', () => {
+  assert.equal(
+    getTheme('cards').fallbackHtml,
+    '<div class="fallback-message"><p><strong>Your browser does not support CSS 3D transforms.</strong></p><p>Open this presentation in a recent Edge, Chrome, or Firefox.</p></div>',
   );
 });
 

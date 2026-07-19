@@ -259,7 +259,7 @@ export function cardsTheme(): Theme {
     accentColor: '#5ec8ff',
     bodyClass: 'impress-not-supported',
     viewport: 'width=1024, minimum-scale=1, maximum-scale=1, user-scalable=no',
-    fallbackHtml: '<div class="fallback-message"><p><strong>Your browser doesn\'t support CSS 3D transforms.</strong></p><p>Open <code>talk.html</code> in a recent Edge, Chrome, or Firefox.</p></div>',
+    fallbackHtml: '<div class="fallback-message"><p><strong>Your browser does not support CSS 3D transforms.</strong></p><p>Open this presentation in a recent Edge, Chrome, or Firefox.</p></div>',
     hintHtml: '<div class="hint"><kbd>Space</kbd>/<kbd>→</kbd> next · <kbd>←</kbd> back · <kbd>Tab</kbd> overview · <kbd>H</kbd> help · <kbd>F</kbd> fullscreen</div>',
     impressAttributes: {
       'transition-duration': 900,
