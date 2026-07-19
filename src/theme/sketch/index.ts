@@ -38,7 +38,13 @@ function createPlacement(region: ThemeRegionDescriptor, index: number): ThemeLay
     ? { x: 0, y: 0, z: 0, scale: 1, rotate: 0 }
     : index === 1
       ? { x: 1100, y: 700, z: 160, scale: 1.04, rotate: -5 }
-      : { x: 2200, y: 1400, z: 320, scale: 1.01, rotate: 4 };
+      : {
+        x: (index % 3) * 1100,
+        y: (Math.floor(index / 3) + 1) * 700,
+        z: index * 80,
+        scale: 1,
+        rotate: ((index % 3) - 1) * 4,
+      };
   return placements[region.id] ?? {
     id: region.id,
     title: region.title,
@@ -64,9 +70,13 @@ export function sketchTheme(): Theme {
       height: 768,
     },
     globalCss: sketchBoardCss,
-    scenery: sketchBoardMarkup,
+    get scenery() {
+      return rendersAcceptedBoard ? sketchBoardMarkup : '';
+    },
     wrapRegion: false,
-    overview: false,
+    get overview() {
+      return rendersAcceptedBoard ? false : 'auto';
+    },
     layout(regions) {
       rendersAcceptedBoard = regions.length === acceptedRoutes.length
         && regions.every((region, index) => (
@@ -77,6 +87,9 @@ export function sketchTheme(): Theme {
       return regions.map((region, index) => createPlacement(region, index));
     },
     stepClassName(region) {
+      if (!rendersAcceptedBoard) {
+        return undefined;
+      }
       if (region.id === 'cover') {
         return 'overview';
       }

@@ -58,6 +58,31 @@ function createPlacement(region: ThemeRegionDescriptor, index: number): ThemeLay
   };
 }
 
+const acceptedCardsRoutes = [
+  { id: 'intro', title: 'Intro', x: 0, y: 0, scale: 1, rotate: 0 },
+  { id: 'problem', title: 'Problem', x: 1700, y: -150, scale: 1, rotate: 0 },
+  { id: 'triangle', title: 'Triangle', x: 3450, y: 150, scale: 1, rotate: 6 },
+  { id: 'approaches', title: 'Approaches', x: 3450, y: 1750, scale: 1, rotate: 6 },
+  { id: 'rec', title: 'Rec', x: 1700, y: 1900, scale: 1, rotate: 0 },
+  { id: 'pipeline', title: 'Pipeline', x: -100, y: 1900, scale: 1, rotate: 0 },
+  { id: 'spike', title: 'Spike', x: -1750, y: 1750, scale: 1, rotate: -6 },
+  { id: 'kill', title: 'Kill', x: -1750, y: 150, scale: 1, rotate: -6 },
+  { id: 'next', title: 'Next', x: -100, y: -1600, scale: 1, rotate: 0 },
+] as const;
+
+function isAcceptedCardsBoard(regions: readonly ThemeRegionDescriptor[]): boolean {
+  return regions.length === acceptedCardsRoutes.length
+    && regions.every((region, index) => {
+      const accepted = acceptedCardsRoutes[index];
+      return region.id === accepted?.id
+        && region.title === accepted.title
+        && region.x === accepted.x
+        && region.y === accepted.y
+        && (region.scale ?? 1) === accepted.scale
+        && (region.rotate ?? 0) === accepted.rotate;
+    });
+}
+
 function decodeBadTextEntities(value: string): string {
   return value
     .replace(/&quot;/g, '"')
@@ -252,6 +277,8 @@ function renderPlainRegion(region: ThemeRegionDescriptor): string {
 }
 
 export function cardsTheme(): Theme {
+  let rendersAcceptedBoard = false;
+
   return {
     name: 'cards',
     title: 'Zoomable Canvas — Spike',
@@ -268,13 +295,18 @@ export function cardsTheme(): Theme {
     sceneryCss: cardsSceneryCss,
     regionCss: cardsRegionCss,
     wrapRegion: false,
-    overview: {
-      x: 850,
-      y: 150,
-      scale: 7,
-      content: '<h1>The whole map</h1><p class="lede">Press <kbd>Space</kbd> to start · this is the zoom-out anchor</p>',
+    get overview() {
+      return rendersAcceptedBoard
+        ? {
+          x: 850,
+          y: 150,
+          scale: 7,
+          content: '<h1>The whole map</h1><p class="lede">Press <kbd>Space</kbd> to start · this is the zoom-out anchor</p>',
+        }
+        : 'auto';
     },
     layout(regions) {
+      rendersAcceptedBoard = isAcceptedCardsBoard(regions);
       return regions.map((region, index) => createPlacement(region, index));
     },
     renderRegion(region) {

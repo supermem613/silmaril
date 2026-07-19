@@ -21,7 +21,7 @@ Silmaril compiles annotated Markdown into a deterministic single-file HTML canva
 node dist/cli.js build docs/examples/quick.md
 ```
 
-The frontmatter `theme` is used by default. Pass `--theme` to override it or `--out` to choose the output path.
+The frontmatter `title` becomes the HTML document title. Every theme opens on an empty whole-board overview derived from the actual region bounds, and deterministic auto-layout gives each unpositioned region a distinct place. Pass `--theme` to override the frontmatter theme or `--out` to choose the output path.
 
 ## Showcase
 
@@ -39,6 +39,6 @@ silmaril build examples/atlas-tour.md --out examples/atlas.html
 silmaril build examples/sketch-tour.md --out examples/sketch.html
 ```
 
-The theme comes from each file's frontmatter. An explicit `--theme` still wins.
+The theme comes from each file's frontmatter. An explicit `--theme` still wins. The showcase sources intentionally preserve their accepted prototype layouts; ordinary presentations use the generic overview and placement contract.
 
 Use `--help` or `--version` for CLI metadata. `doctor` and `schema` emit JSON by default; `update --json` selects its machine-readable envelope.

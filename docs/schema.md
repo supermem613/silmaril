@@ -29,6 +29,8 @@ Silmaril exposes four public commands and a small set of JSON-oriented flags. Th
 - Flags: `--out`, `--theme`, `--emit-scene`, `--open`
 - Output path: `--out` selects an explicit path. When omitted, Silmaril writes `<source-name>.html` in the operating system temp directory.
 - Theme: `--theme` overrides frontmatter `theme`; otherwise frontmatter wins, with `cards` as the final default.
+- Document title: frontmatter `title` becomes the generated HTML `<title>`; the theme title is used only when frontmatter omits it.
+- Opening view: ordinary presentations begin on an empty overview centered from the actual region bounds, with one distinct deterministic placement per region.
 - Exit: `0` on success; `1` when options are invalid or the build fails.
 - Output envelope: success uses `{"ok":true,"command":"build","data":{"outputPath":...,"byteCount":...,"theme":...},"warnings":[]}`; failure uses `{"ok":false,"command":"build","error":"invalid-options|build-failed","hint":"..."}`.
 

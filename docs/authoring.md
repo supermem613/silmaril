@@ -18,7 +18,7 @@ canvas:
 
 Supported frontmatter keys:
 
-- `title`: string, used for the scene identifier and title fallback.
+- `title`: string, used as the generated HTML document title.
 - `theme`: `cards`, `atlas`, or `sketch`. The CLI uses this value unless `--theme` overrides it.
 - `canvas.width` and `canvas.height`: positive numbers for the scene canvas dimensions.
 
@@ -69,9 +69,10 @@ Use a nested group inside `@silmaril` to keep regions together:
 
 The current public build path uses deterministic auto-layout:
 
-- overview regions (those without a group) render first;
-- grouped regions render after the overview in the order they appear;
-- the default grid is 3 columns with a 24px gap.
+- an empty whole-board overview is the first camera target;
+- the overview center is derived from the minimum and maximum region coordinates;
+- every unpositioned region receives a distinct deterministic placement;
+- grouped regions retain their authored order.
 
 Manual `x`, `y`, `scale`, and `rotate` values flow through the public `build` command. Sparse placement is supported: author only the fields you want to override and the theme keeps its values for the rest.
 
@@ -89,9 +90,11 @@ This means:
 
 The `build` command accepts three themes through frontmatter or `--theme`:
 
-- `cards`: dark presentation cards with authored semantic emphasis and a zoomed-out map anchor.
-- `atlas`: parchment location cards over one shared illustrated world.
-- `sketch`: camera targets across one shared hand-drawn board.
+- `cards`: dark presentation cards with authored semantic emphasis.
+- `atlas`: parchment location cards on a neutral canvas.
+- `sketch`: hand-drawn cards on a neutral canvas.
+
+All three themes follow the same generic contract: open on the content-free whole-board overview, keep every region at a distinct location, and use the authored frontmatter title for the browser tab. The repository showcase sources are exact accepted prototypes and retain their richer fixed scenery and routes.
 
 The repository showcase sources demonstrate the richer conventions for each accepted presentation:
 

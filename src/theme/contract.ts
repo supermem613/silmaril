@@ -56,7 +56,7 @@ export interface Theme {
   readonly css?: string;
   readonly scenery?: string;
   readonly wrapRegion?: boolean;
-  readonly overview?: ThemeOverview | false;
+  readonly overview?: ThemeOverview | 'auto' | false;
   readonly stepClassName?: (
     region: ThemeRegionDescriptor,
     context: { readonly theme: Theme },

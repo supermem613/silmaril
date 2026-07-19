@@ -111,7 +111,7 @@ export async function buildCommand(input: string, opts: BuildOptions, deps: Buil
       };
     });
 
-    const html = assemble(theme, renderedRegions);
+    const html = assemble(theme, renderedRegions, { documentTitle: scene.attrs.title });
     validateBuildOutput(html);
 
     const outputDirectory = dirname(outputPath);

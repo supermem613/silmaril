@@ -14,6 +14,12 @@ export interface Region {
   readonly rotate?: number;
 }
 
+export interface AssembleOptions {
+  readonly documentTitle?: string;
+}
+
+const CAMERA_OVERVIEW_STYLE = 'width:0;padding:0;background:transparent;border:0;border-radius:0;box-shadow:none;opacity:0;pointer-events:none';
+
 function getImpressScript(): string {
   return readFileSync(new URL('../../assets/vendor/impress.min.js', import.meta.url), 'utf8');
 }
@@ -101,7 +107,10 @@ function createStep(theme: Theme, region: ThemeRegionDescriptor, placement: Them
   };
 }
 
-function createOverviewStep(overview: ThemeOverview | undefined): TemplateStep {
+function createOverviewStep(
+  overview: ThemeOverview | undefined,
+  stepOverrides: Pick<TemplateStep, 'className' | 'style'> = {},
+): TemplateStep {
   return {
     id: overview?.id ?? 'overview',
     title: overview?.title ?? 'Overview',
@@ -112,11 +121,54 @@ function createOverviewStep(overview: ThemeOverview | undefined): TemplateStep {
     rotate: overview?.rotate,
     content: overview?.content ?? '',
     overview: true,
-    className: overview?.className,
+    className: stepOverrides.className ?? overview?.className,
+    style: stepOverrides.style,
   };
 }
 
-export function assemble(theme: Theme, regions: readonly Region[]): string {
+function createAutoOverviewStep(placements: readonly ThemeLayoutPlacement[]): TemplateStep {
+  if (placements.length === 0) {
+    return createOverviewStep(
+      {
+        x: 0,
+        y: 0,
+        scale: 1,
+        content: '',
+      },
+      {
+        className: 'camera-overview',
+        style: CAMERA_OVERVIEW_STYLE,
+      },
+    );
+  }
+
+  const xValues = placements.map((placement) => placement.x);
+  const yValues = placements.map((placement) => placement.y);
+  const minX = Math.min(...xValues);
+  const maxX = Math.max(...xValues);
+  const minY = Math.min(...yValues);
+  const maxY = Math.max(...yValues);
+  const scale = Math.max(
+    1,
+    (maxX - minX + 1200) / 1024,
+    (maxY - minY + 800) / 768,
+  );
+
+  return createOverviewStep(
+    {
+      x: (minX + maxX) / 2,
+      y: (minY + maxY) / 2,
+      scale: Number(scale.toFixed(4)),
+      content: '',
+    },
+    {
+      className: 'camera-overview',
+      style: CAMERA_OVERVIEW_STYLE,
+    },
+  );
+}
+
+export function assemble(theme: Theme, regions: readonly Region[], options: AssembleOptions = {}): string {
   const descriptors = regions.map(toThemeRegion);
   const validationErrors = theme.validate?.(theme, descriptors);
   if (Array.isArray(validationErrors)) {
@@ -131,12 +183,14 @@ export function assemble(theme: Theme, regions: readonly Region[]): string {
   const placements = resolveLayout(theme, descriptors);
   const steps = descriptors.map((region, index) => createStep(theme, region, placements[index] ?? createFallbackPlacement(region, index)));
 
-  if (theme.overview !== false) {
+  if (theme.overview === 'auto') {
+    steps.unshift(createAutoOverviewStep(placements));
+  } else if (theme.overview !== false) {
     steps.push(createOverviewStep(theme.overview));
   }
 
   return renderTemplate({
-    title: theme.title ?? 'Zoomable Canvas',
+    title: options.documentTitle ?? theme.title ?? 'Zoomable Canvas',
     theme,
     steps,
     impressScript: getImpressScript(),

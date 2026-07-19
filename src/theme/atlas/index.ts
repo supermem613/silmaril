@@ -16,6 +16,21 @@ const placements: Readonly<Record<string, ThemeLayoutPlacement>> = {
   finis: { id: 'finis', title: 'Finis', x: 0, y: 0, z: 0, scale: 3.9, rotate: 0 },
 };
 
+const acceptedRoutes = [
+  { id: 'cover', title: 'Cover' },
+  { id: 'havens', title: 'Havens' },
+  { id: 'shire', title: 'Shire' },
+  { id: 'bree', title: 'Bree' },
+  { id: 'rivendell', title: 'Rivendell' },
+  { id: 'misty', title: 'Misty' },
+  { id: 'lorien', title: 'Lorien' },
+  { id: 'isengard', title: 'Isengard' },
+  { id: 'edoras', title: 'Edoras' },
+  { id: 'gondor', title: 'Gondor' },
+  { id: 'doom', title: 'Doom' },
+  { id: 'finis', title: 'Finis' },
+] as const;
+
 const atlasCss = `  html,body{height:100%;margin:0;background:#241d16;overflow:hidden}
   body{font-family:"Palatino Linotype","Book Antiqua",Georgia,serif;color:#2b2016;
     -webkit-font-smoothing:antialiased}
@@ -64,14 +79,39 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
-function createPlacement(region: ThemeRegionDescriptor, index: number): ThemeLayoutPlacement {
-  return placements[region.id] ?? {
+function isAcceptedAtlasBoard(regions: readonly ThemeRegionDescriptor[]): boolean {
+  return regions.length === acceptedRoutes.length
+    && regions.every((region, index) => {
+      const accepted = acceptedRoutes[index];
+      const placement = placements[region.id];
+      return region.id === accepted?.id
+        && region.title === accepted.title
+        && region.x === placement?.x
+        && region.y === placement.y
+        && (region.scale ?? 1) === placement.scale;
+    });
+}
+
+function createPlacement(region: ThemeRegionDescriptor, index: number, accepted: boolean): ThemeLayoutPlacement {
+  if (accepted) {
+    return placements[region.id] ?? {
+      id: region.id,
+      title: region.title,
+      x: index * 500,
+      y: 0,
+      z: 0,
+      scale: 0.6,
+      rotate: 0,
+    };
+  }
+
+  return {
     id: region.id,
     title: region.title,
-    x: index * 500,
-    y: 0,
+    x: (index % 3) * 1100,
+    y: Math.floor(index / 3) * 800,
     z: 0,
-    scale: 0.6,
+    scale: 1,
     rotate: 0,
   };
 }
@@ -95,6 +135,8 @@ function renderAtlasRegion(region: ThemeRegionDescriptor): string {
 }
 
 export function atlasTheme(): Theme {
+  let rendersAcceptedBoard = false;
+
   return {
     name: 'atlas',
     title: 'A Journey Across the Map',
@@ -110,13 +152,21 @@ export function atlasTheme(): Theme {
       height: 768,
     },
     globalCss: atlasCss,
-    scenery: atlasWorldMarkup,
+    get scenery() {
+      return rendersAcceptedBoard ? atlasWorldMarkup : '';
+    },
     wrapRegion: false,
-    overview: false,
+    get overview() {
+      return rendersAcceptedBoard ? false : 'auto';
+    },
     layout(regions) {
-      return regions.map((region, index) => createPlacement(region, index));
+      rendersAcceptedBoard = isAcceptedAtlasBoard(regions);
+      return regions.map((region, index) => createPlacement(region, index, rendersAcceptedBoard));
     },
     stepClassName(region) {
+      if (!rendersAcceptedBoard) {
+        return undefined;
+      }
       if (region.id === 'cover') {
         return 'overview';
       }

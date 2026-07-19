@@ -11,6 +11,7 @@ export interface TemplateStep {
   readonly content: string;
   readonly overview?: boolean;
   readonly className?: string;
+  readonly style?: string;
 }
 
 export interface TemplateOptions {
@@ -56,6 +57,10 @@ export function renderTemplate(options: TemplateOptions): string {
         `data-z="${step.z}"`,
         `data-id="${escapeHtml(step.id)}"`,
       ];
+
+      if (step.style) {
+        attributes.push(`style="${escapeHtml(step.style)}"`);
+      }
 
       if (step.overview) {
         attributes.push(`data-scale="${step.scale ?? 4}"`);

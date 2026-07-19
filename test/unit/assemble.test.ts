@@ -6,6 +6,20 @@ import { assemble } from '../../src/pipeline/assemble.js';
 import { parseScene } from '../../src/pipeline/parse.js';
 import type { Theme } from '../../src/theme/contract.js';
 import { plainTheme } from '../../src/theme/plain.js';
+import { getTheme } from '../../src/theme/registry.js';
+
+const publicThemes = ['cards', 'atlas', 'sketch'] as const;
+
+function readStepAttribute(attributes: string, name: string): string | undefined {
+  return attributes.match(new RegExp(`\\b${name}="([^"]+)"`))?.[1];
+}
+
+function projectSteps(html: string) {
+  return [...html.matchAll(/<div class="([^"]*\bstep\b[^"]*)" ([^>]*)>/g)].map((match) => ({
+    className: match[1] ?? '',
+    attributes: match[2] ?? '',
+  }));
+}
 
 test('test/unit/assemble.test.ts', () => {
   const theme = plainTheme();
@@ -29,6 +43,61 @@ test('initializes impress through its public factory API', () => {
   assert.match(
     html,
     /<script>if \(typeof window\.impress === 'function'\) \{ window\.impress\(\)\.init\(\); \}<\/script>/,
+  );
+});
+
+for (const themeName of publicThemes) {
+  test(`${themeName} opens on a content-free overview that frames every region`, () => {
+    const html = assemble(getTheme(themeName), [
+      { id: 'one', title: 'One', content: 'First' },
+      { id: 'two', title: 'Two', content: 'Second' },
+      { id: 'three', title: 'Three', content: 'Third' },
+      { id: 'four', title: 'Four', content: 'Fourth' },
+      { id: 'five', title: 'Five', content: 'Fifth' },
+      { id: 'six', title: 'Six', content: 'Sixth' },
+    ]);
+    const steps = projectSteps(html);
+    const overview = steps[0];
+
+    assert.equal(readStepAttribute(overview?.attributes ?? '', 'data-id'), 'overview');
+    assert.match(overview?.className ?? '', /\boverview\b/);
+    assert.match(overview?.className ?? '', /\bcamera-overview\b/);
+    assert.match(
+      html,
+      /<div class="step overview camera-overview" [^>]*data-id="overview"[^>]*style="[^"]*background:transparent;[^"]*border:0;[^"]*box-shadow:none[^"]*"[^>]*><\/div>/,
+      'the whole-board camera must not render prototype copy or another presentation card',
+    );
+
+    const authored = steps.slice(1);
+    const placements = authored.map((step) => ({
+      x: Number(readStepAttribute(step.attributes, 'data-x')),
+      y: Number(readStepAttribute(step.attributes, 'data-y')),
+      scale: Number(readStepAttribute(step.attributes, 'data-scale') ?? 1),
+    }));
+    assert.equal(
+      new Set(placements.map((placement) => `${placement.x},${placement.y},${placement.scale}`)).size,
+      authored.length,
+      'every region must have a distinct place on the board',
+    );
+
+    const expectedX = (Math.min(...placements.map((placement) => placement.x))
+      + Math.max(...placements.map((placement) => placement.x))) / 2;
+    const expectedY = (Math.min(...placements.map((placement) => placement.y))
+      + Math.max(...placements.map((placement) => placement.y))) / 2;
+    assert.equal(Number(readStepAttribute(overview?.attributes ?? '', 'data-x')), expectedX);
+    assert.equal(Number(readStepAttribute(overview?.attributes ?? '', 'data-y')), expectedY);
+  });
+}
+
+test('cards renders the automatic overview as a transparent camera target', () => {
+  const html = assemble(getTheme('cards'), [
+    { id: 'one', title: 'One', content: 'First' },
+    { id: 'two', title: 'Two', content: 'Second' },
+  ]);
+
+  assert.match(
+    html,
+    /<div class="step overview camera-overview" [^>]*style="[^"]*background:transparent;[^"]*border:0;[^"]*box-shadow:none[^"]*"/,
   );
 });
 

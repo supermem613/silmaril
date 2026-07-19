@@ -9,7 +9,7 @@ The exported contract lives in `src/theme/contract.ts`. A theme is a `Theme` obj
 - `ThemeRegionDescriptor` describes each region as `{ id, title, content }`.
 - `ThemeLayoutPlacement` describes the final slide placement as `{ id, title, x, y, z, scale, rotate }`.
 - `ThemeAsset` describes an embeddable asset as `{ name?, content, mimeType?, type? }`.
-- `Theme` holds the author-facing hooks for naming, colors, CSS, HTML rendering, optional layout and validation, and offline asset embedding.
+- `Theme` holds the author-facing hooks for naming, colors, CSS, HTML rendering, overview behavior, optional layout and validation, and offline asset embedding.
 
 ## What to implement for a valid theme
 
@@ -21,7 +21,7 @@ A minimal valid theme should provide:
 - CSS hooks through `globalCss`, `sceneryCss`, and `regionCss`
 - optional offline assets through `assets` or `embeddedAssets`
 
-The current renderer consumes `globalCss`, `sceneryCss`, and `regionCss` when building the final HTML. The exported contract also includes `css` and `scenery`, but they are not consumed by the current assembler.
+The current renderer consumes `globalCss`, `sceneryCss`, `regionCss`, and `scenery` when building the final HTML. The exported contract also includes `css`.
 
 ## Theme hooks and usage
 
@@ -30,8 +30,11 @@ The current renderer consumes `globalCss`, `sceneryCss`, and `regionCss` when bu
 - Use `regionCss` for the region markup created by `renderRegion`.
 - Use `renderRegion` to wrap the sanitized HTML in `region.content`. Escape titles and other theme-owned text, but do not escape `region.content` again.
 - Use `layout` when the theme needs custom placements; otherwise the assembler falls back to the default sequential layout.
+- Use `overview: 'auto'` for ordinary presentations. The assembler emits an empty first overview centered from the actual placement bounds. Every generic layout must return a distinct placement for every region.
 - Use `validate` to reject invalid themes before the HTML is rendered. The assembler throws when validation returns a non-empty string or array.
 - Use `assets` or `embeddedAssets` when the theme needs offline data URIs or embedded CSS/JS/text.
+
+Prototype-specific scenery, routes, or overview content must be gated by the complete accepted document signature. A near-match or ordinary deck must use the generic overview and distinct-placement contract instead of inheriting prototype copy or scenery.
 
 ## Determinism expectations
 

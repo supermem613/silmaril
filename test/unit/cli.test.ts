@@ -125,8 +125,9 @@ describe("cli contract", () => {
     const html = readFileSync(outPath, "utf8");
     assert.match(html, /<html/i);
     assert.match(html, /<body/i);
+    assert.match(html, /<title>Demo<\/title>/i);
+    assert.match(html, /<div class="step overview camera-overview"[^>]*data-id="overview"[^>]*data-scale="1\.1719"><\/div>/i);
     assert.match(html, /<h2>Alpha<\/h2>/i);
-    assert.match(html, /data-id="overview"[^>]*data-scale="7"/i);
   });
 
   it("uses the frontmatter theme unless an explicit theme overrides it", () => {
@@ -144,15 +145,19 @@ describe("cli contract", () => {
     assert.equal(frontmatterBuild.status, 0, frontmatterBuild.stderr || frontmatterBuild.stdout);
     const frontmatterPayload = readJson(frontmatterBuild.stdout) as { data: { theme: string } };
     assert.equal(frontmatterPayload.data.theme, "sketch");
-    assert.match(readFileSync(frontmatterOutPath, "utf8"), /<div id="world">/);
-    assert.match(readFileSync(frontmatterOutPath, "utf8"), /<h2 style="font-size:48px[^"]*">Alpha<\/h2>/);
+    const frontmatterHtml = readFileSync(frontmatterOutPath, "utf8");
+    assert.match(frontmatterHtml, /<title>Demo<\/title>/i);
+    assert.match(frontmatterHtml, /<div class="step overview camera-overview"[^>]*data-id="overview"/i);
+    assert.match(frontmatterHtml, /<h2 style="font-size:48px[^"]*">Alpha<\/h2>/);
 
     const overrideBuild = runCli(["build", markdownPath, "--out", overrideOutPath, "--theme", "atlas"]);
     assert.equal(overrideBuild.status, 0, overrideBuild.stderr || overrideBuild.stdout);
     const overridePayload = readJson(overrideBuild.stdout) as { data: { theme: string } };
     assert.equal(overridePayload.data.theme, "atlas");
-    assert.match(readFileSync(overrideOutPath, "utf8"), /<div id="world">/);
-    assert.match(readFileSync(overrideOutPath, "utf8"), /<h2>Alpha<\/h2>/);
+    const overrideHtml = readFileSync(overrideOutPath, "utf8");
+    assert.match(overrideHtml, /<title>Demo<\/title>/i);
+    assert.match(overrideHtml, /<div class="step overview camera-overview"[^>]*data-id="overview"/i);
+    assert.match(overrideHtml, /<h2>Alpha<\/h2>/);
   });
 
   it("inlines local images relative to the markdown source", () => {
