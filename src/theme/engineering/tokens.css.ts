@@ -29,6 +29,11 @@ export const engineeringTokensCss = `
     --code-bg: var(--dark-code-bg);
     --code-text: var(--dark-code-text);
     --shadow: var(--dark-shadow);
+    --token-mermaid-node-fill: #13384b;
+    --token-mermaid-node-stroke: var(--accent);
+    --token-mermaid-node-text: var(--text);
+    --token-mermaid-edge: var(--accent-strong);
+    --token-mermaid-label: var(--muted);
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -54,7 +59,38 @@ export const engineeringTokensCss = `
     --code-bg: var(--light-code-bg);
     --code-text: var(--light-code-text);
     --shadow: var(--light-shadow);
+    --token-mermaid-node-fill: #dfe9ef;
+    --token-mermaid-node-stroke: var(--accent);
+    --token-mermaid-node-text: var(--text);
+    --token-mermaid-edge: var(--accent);
+    --token-mermaid-label: var(--muted);
     background: linear-gradient(140deg, var(--light-bg), var(--surface));
+  }
+
+  .engineering-mermaid {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin: 0.25rem 0;
+  }
+
+  .engineering-mermaid .mermaid-node {
+    fill: var(--token-mermaid-node-fill);
+    stroke: var(--token-mermaid-node-stroke);
+    stroke-width: 2;
+  }
+
+  .engineering-mermaid .mermaid-node-text {
+    fill: var(--token-mermaid-node-text);
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+  }
+
+  .engineering-mermaid .mermaid-edge {
+    fill: none;
+    stroke: var(--token-mermaid-edge);
+    stroke-width: 2.5;
   }
 
   .engineering-shell__toolbar {
