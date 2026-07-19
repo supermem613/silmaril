@@ -45,6 +45,11 @@ export interface SceneIR {
   html?: never;
 }
 
+export interface BoardIR extends SceneIR {
+  title: string;
+  slides: SceneRegionIR[];
+}
+
 export interface LayoutPatchSource {
   x?: number;
   y?: number;

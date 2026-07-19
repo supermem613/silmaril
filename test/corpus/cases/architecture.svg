@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="320" viewBox="0 0 720 320" role="img" aria-label="Engineering architecture diagram">
+  <rect width="720" height="320" fill="#0B0D0E" />
+  <rect x="70" y="80" width="180" height="90" rx="16" fill="#12161A" stroke="#67D3C2" stroke-width="3" />
+  <rect x="270" y="80" width="180" height="90" rx="16" fill="#12161A" stroke="#67D3C2" stroke-width="3" />
+  <rect x="470" y="80" width="180" height="90" rx="16" fill="#12161A" stroke="#67D3C2" stroke-width="3" />
+  <rect x="170" y="210" width="380" height="70" rx="16" fill="#12161A" stroke="#67D3C2" stroke-width="3" />
+  <line x1="250" y1="170" x2="270" y2="170" stroke="#67D3C2" stroke-width="4" />
+  <line x1="450" y1="170" x2="470" y2="170" stroke="#67D3C2" stroke-width="4" />
+  <line x1="360" y1="170" x2="360" y2="210" stroke="#67D3C2" stroke-width="4" />
+  <text x="160" y="126" fill="#F3F7F6" font-family="Segoe UI, sans-serif" font-size="24" text-anchor="middle">Build</text>
+  <text x="360" y="126" fill="#F3F7F6" font-family="Segoe UI, sans-serif" font-size="24" text-anchor="middle">Release</text>
+  <text x="560" y="126" fill="#F3F7F6" font-family="Segoe UI, sans-serif" font-size="24" text-anchor="middle">Ops</text>
+  <text x="360" y="252" fill="#F3F7F6" font-family="Segoe UI, sans-serif" font-size="24" text-anchor="middle">Shared Delivery Platform</text>
+</svg>

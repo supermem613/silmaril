@@ -1,5 +1,6 @@
 import MarkdownIt from "markdown-it";
 import hljs from "highlight.js";
+import { renderMermaidBlock } from "./mermaid.js";
 
 const DEFAULT_RENDERER_OPTIONS = {
   html: false,
@@ -35,6 +36,9 @@ function createMarkdownRenderer(): MarkdownIt {
     const info = token?.info?.trim() ?? "";
     const content = token?.content ?? "";
     const language = info.split(/\s+/)[0] ?? "";
+    if (language.toLowerCase() === "mermaid") {
+      return renderMermaidBlock(content);
+    }
     return renderCodeBlock(content, language);
   };
 

@@ -76,7 +76,7 @@ describe("cli contract", () => {
     assert.equal(schemaPayload.ok, true);
     assert.equal(schemaPayload.command, "schema");
     assert.equal(schemaPayload.data.schemaVersion, 1);
-    assert.equal(schemaPayload.data.cliVersion, "0.2.0");
+    assert.equal(schemaPayload.data.cliVersion, "0.3.0");
     assert.equal(schemaPayload.data.envelope.stdout, "JSON only for non-interactive commands when --json or schema is used");
     assert.deepEqual(schemaPayload.data.envelope.successEnvelope, ["ok", "command", "data", "warnings"]);
     assert.deepEqual(schemaPayload.data.envelope.errorEnvelope, ["ok", "command", "error", "hint"]);

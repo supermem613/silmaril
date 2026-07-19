@@ -1,6 +1,6 @@
 # Silmaril authoring guide
 
-Silmaril accepts a single markdown scene file and turns it into a deterministic single-file HTML canvas. The public entry point is `build`, and the underlying parser understands a compact frontmatter block plus a bullet-based region grammar.
+Silmaril accepts a single markdown scene file and turns it into a deterministic single-file HTML canvas. The public entry point is `build`. The engineering theme uses heading-defined slides, while the legacy themes use the bullet-based region grammar.
 
 ## 1. Frontmatter
 
@@ -19,14 +19,34 @@ canvas:
 Supported frontmatter keys:
 
 - `title`: string, used as the generated HTML document title.
-- `theme`: `cards`, `atlas`, or `sketch`. The CLI uses this value unless `--theme` overrides it.
+- `theme`: `engineering`, `cards`, `atlas`, or `sketch`. The CLI uses this value unless `--theme` overrides it.
 - `canvas.width` and `canvas.height`: positive numbers for the scene canvas dimensions.
 
 The parser accepts simple scalars (`true`, `false`, `null`, strings, numbers) and nested objects. Arrays are not part of the current grammar.
 
 ## 2. Region grammar
 
-After the frontmatter, write one region per top-level bullet list item. The region title is the text of the bullet. Indented lines that follow belong to the region body.
+For the `engineering` theme, use one `#` heading for the board title and one `##` heading for each ordered slide:
+
+````md
+# Service readiness
+
+## Request path
+
+```mermaid
+flowchart LR
+  Client[Client] --> API[API]
+  API --> Store[Store]
+```
+
+## Rollout
+
+Ship behind a feature flag, then expand by measured stages.
+````
+
+Mermaid flowchart fences are compiled at build time into deterministic inline SVG. Diagram colors use the engineering theme tokens, so dark and light mode switch together. The generated HTML contains no Mermaid runtime library and no remote or CDN diagram reference.
+
+For `cards`, `atlas`, and `sketch`, write one region per top-level bullet list item. The region title is the text of the bullet. Indented lines that follow belong to the region body.
 
 ```md
 - Overview
@@ -88,13 +108,14 @@ This means:
 
 ## 5. Themes
 
-The `build` command accepts three themes through frontmatter or `--theme`:
+The `build` command accepts four themes through frontmatter or `--theme`:
 
+- `engineering`: minimalist dark-first slides with a persistent light-mode toggle and build-time inline Mermaid flowcharts.
 - `cards`: dark presentation cards with authored semantic emphasis.
 - `atlas`: parchment location cards on a neutral canvas.
 - `sketch`: hand-drawn cards on a neutral canvas.
 
-All three themes follow the same generic contract: open on the content-free whole-board overview, keep every region at a distinct location, and use the authored frontmatter title for the browser tab. The repository showcase sources are exact accepted prototypes and retain their richer fixed scenery and routes.
+All four themes open on the content-free whole-board overview, keep every region at a distinct location, and use the authored title for the browser tab. The repository showcase sources are exact accepted prototypes and retain their richer fixed scenery and routes.
 
 The repository showcase sources demonstrate the richer conventions for each accepted presentation:
 
