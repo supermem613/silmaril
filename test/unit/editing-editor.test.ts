@@ -45,7 +45,7 @@ function extractCssRule(css: string, selector: string): string | null {
   return match?.[1] ?? null;
 }
 
-test("embeds a slide-local Markdown editor with Markdown-based live preview, runtime persistence, and an accessible amber --strong emphasis color shared by the rendered slide and the live preview", () => {
+test("embeds a slide-local Markdown editor with live slide rendering, runtime persistence, and accessible amber strong emphasis", () => {
   const source = [
     "# Engineering Board",
     "## Inline Editing",
@@ -70,9 +70,9 @@ test("embeds a slide-local Markdown editor with Markdown-based live preview, run
 
   assert.match(html, /<div[^>]+data-editor-container/i, "expected an embedded editor container for the slide-local Markdown editor");
   assert.match(html, /<textarea[^>]+data-editor-input/i, "expected a textarea input for the focused slide's Markdown");
-  assert.match(html, /<div[^>]+data-editor-preview/i, "expected a live preview container for the slide-local Markdown editor");
   assert.match(html, /<div[^>]+data-slide-content/i, "expected each rendered slide body to expose a live-update target");
   assert.match(html, /<div[^>]+data-editor-actions/i, "expected editor and export actions to share one compact control group");
+  assert.match(html, /<button[^>]+data-editor-drawer-toggle[^>]+aria-expanded="false"/i, "expected a collapsed right-edge control drawer");
   assert.ok(html.includes(markdownItBundle), "expected the complete local markdown-it browser bundle to be embedded in the single-file artifact");
 
   const inlineScripts = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/gi)].map((match) => match[1]).join("\n");
@@ -81,10 +81,11 @@ test("embeds a slide-local Markdown editor with Markdown-based live preview, run
   assert.match(inlineScripts, /slide\.id|payload\.slides|slides\[|sourcePayload/i, "expected the editor runtime to use the silmaril-source slide payload when associating markdown with each slide id");
   assert.match(inlineScripts, /dataset\.slideId\s*=\s*[^;]*\.id/i, "expected the editor runtime to associate the textarea with the focused slide id");
   assert.match(inlineScripts, /\.markdown\s*=\s*(?:textarea\.value|event\.target\.value|markdown)/i, "expected the textarea input path to assign its value to the matching source-model slide markdown");
-  assert.match(inlineScripts, /markdown-it|marked|remark|showdown/i, "expected the live preview path to use a bundled local Markdown renderer");
-  assert.match(inlineScripts, /(?:render|renderInline)\(\s*(?:textarea\.value|event\.target\.value|markdown)/i, "expected the editor runtime to pass textarea Markdown to the preview renderer");
+  assert.match(inlineScripts, /markdown-it|marked|remark|showdown/i, "expected live slide rendering to use a bundled local Markdown renderer");
   assert.match(inlineScripts, /querySelector\([^)]*data-slide-content[^)]*\)/i, "expected the editor runtime to find the focused slide's live-update target");
   assert.match(inlineScripts, /slideContent\.innerHTML\s*=\s*renderMarkdown\(/i, "expected Markdown edits to refresh the focused slide HTML");
+  assert.match(inlineScripts, /drawerToggle\.setAttribute\(\s*['"]aria-expanded['"]/i, "expected the drawer runtime to expose its expanded state");
+  assert.match(inlineScripts, /actions\.(?:removeAttribute\(\s*['"]hidden['"]\s*\)|setAttribute\(\s*['"]hidden['"])/i, "expected the drawer runtime to reveal and hide the editor actions");
   assert.match(inlineScripts, /(?:event\.key|event\.code)\s*===\s*['"]F5['"][\s\S]*?stopImmediatePropagation\(\)/i, "expected engineering navigation to preserve browser refresh instead of allowing Impress fullscreen");
   assert.match(inlineScripts, /document\.body\.appendChild\([^)]*editor[^)]*\)/i, "expected the editor shell to be moved outside the transformed Impress canvas");
 
@@ -100,16 +101,17 @@ test("embeds a slide-local Markdown editor with Markdown-based live preview, run
   assert.ok(editorActionsRule, "expected a shared editor action group CSS rule");
   assert.match(editorActionsRule ?? "", /display:\s*(?:inline-)?flex/i, "expected editor actions to use one aligned flex row");
 
+  const editorDrawerToggleRule = extractCssRule(engineeringTokensCss, ".engineering-editor-drawer-toggle");
+  assert.ok(editorDrawerToggleRule, "expected a right-edge drawer toggle CSS rule");
+  assert.match(editorDrawerToggleRule ?? "", /border-radius:\s*[^;]*0[^;]*0/i, "expected the drawer toggle to attach visually to the right viewport edge");
+
   const boardSignatureRule = extractCssRule(engineeringTokensCss, ".engineering-board-signature");
   assert.ok(boardSignatureRule, "expected a board signature CSS rule");
   assert.match(boardSignatureRule ?? "", /font-size:\s*0\.[4-7][0-9]*rem/i, "expected the board version signature to remain deliberately small");
 
   const engineeringCardStrongRule = extractCssRule(engineeringTokensCss, ".engineering-card strong");
-  const editorPreviewStrongRule = extractCssRule(engineeringTokensCss, ".editor-preview strong") ?? extractCssRule(engineeringTokensCss, "[data-editor-preview] strong");
   assert.ok(engineeringCardStrongRule, "expected a .engineering-card strong CSS rule for the rendered slide strong emphasis styling");
-  assert.ok(editorPreviewStrongRule, "expected an editor preview strong selector rule such as .editor-preview strong or [data-editor-preview] strong");
   assert.match(engineeringCardStrongRule ?? "", /color:\s*var\(--strong\)/i, "expected .engineering-card strong to use color var(--strong)");
-  assert.match(editorPreviewStrongRule ?? "", /color:\s*var\(--strong\)/i, "expected the editor preview strong selector to use color var(--strong)");
 
   assert.match(engineeringTokensCss, /:root\s*\{[\s\S]*?--strong:\s*var\(--dark-strong\)/i, "expected the root dark defaults to bind --strong to --dark-strong");
   assert.match(engineeringTokensCss, /html\[data-theme="light"\][\s\S]*?--strong:\s*var\(--light-strong\)/i, "expected the light document theme block to bind --strong to --light-strong");
@@ -125,6 +127,31 @@ test("embeds a slide-local Markdown editor with Markdown-based live preview, run
   const lightSurface = "#FFFFFF";
   assert.ok(contrastRatio(darkStrong, darkSurface) >= 4.5, `expected --dark-strong ${darkStrong} to meet WCAG AA contrast against ${darkSurface}`);
   assert.ok(contrastRatio(lightStrong, lightSurface) >= 4.5, `expected --light-strong ${lightStrong} to meet WCAG AA contrast against ${lightSurface}`);
+});
+
+test("wraps the engineering board after five slides and centers the final row", () => {
+  const theme = getTheme("engineering");
+  const regions: Region[] = Array.from({ length: 7 }, (_, index) => ({
+    id: `slide-${index + 1}`,
+    title: `Slide ${index + 1}`,
+    content: `<p>Slide ${index + 1}</p>`,
+  }));
+
+  assert.ok(theme.layout, "expected the engineering theme to provide a board layout");
+  const placements = theme.layout(regions, { theme });
+  assert.deepEqual(
+    placements.map(({ x, y }) => ({ x, y })),
+    [
+      { x: 0, y: 0 },
+      { x: 1200, y: 0 },
+      { x: 2400, y: 0 },
+      { x: 3600, y: 0 },
+      { x: 4800, y: 0 },
+      { x: 1800, y: 900 },
+      { x: 3000, y: 900 },
+    ],
+    "expected five slides on the first row and a centered second row",
+  );
 });
 
 test("resolves the Markdown renderer from a hoisted dependency in a packed install layout", async () => {

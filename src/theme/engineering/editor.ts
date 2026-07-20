@@ -10,11 +10,15 @@ export function engineeringEditorMarkup(): string {
     <div class="engineering-editor-panel" id="engineering-editor-panel" data-editor-container hidden>
       <label class="engineering-editor-panel__label" for="engineering-editor-input">Markdown</label>
       <textarea class="engineering-editor-panel__input" id="engineering-editor-input" data-editor-input spellcheck="false"></textarea>
-      <div class="engineering-editor-panel__preview" data-editor-preview aria-live="polite"></div>
     </div>
-    <div class="engineering-editor-actions" data-editor-actions>
-      <button class="engineering-editor-toggle" type="button" data-editor-toggle aria-controls="engineering-editor-panel" aria-expanded="false" aria-label="Edit slide markdown" title="Edit slide markdown">
-        <span class="engineering-editor-toggle__label">Edit</span>
+    <div class="engineering-editor-drawer">
+      <div class="engineering-editor-actions" id="engineering-editor-actions" data-editor-actions hidden>
+        <button class="engineering-editor-toggle" type="button" data-editor-toggle aria-controls="engineering-editor-panel" aria-expanded="false" aria-label="Edit slide markdown" title="Edit slide markdown">
+          <span class="engineering-editor-toggle__label">Edit</span>
+        </button>
+      </div>
+      <button class="engineering-editor-drawer-toggle" type="button" data-editor-drawer-toggle aria-controls="engineering-editor-actions" aria-expanded="false" aria-label="Show editing controls" title="Show editing controls">
+        <span data-editor-drawer-icon aria-hidden="true">&laquo;</span>
       </button>
     </div>
   </div>
@@ -32,10 +36,12 @@ export const engineeringEditorScript = `
         }
 
         var toggle = editorShell ? editorShell.querySelector('[data-editor-toggle]') : document.querySelector('[data-editor-toggle]');
+        var drawerToggle = editorShell ? editorShell.querySelector('[data-editor-drawer-toggle]') : document.querySelector('[data-editor-drawer-toggle]');
+        var drawerIcon = editorShell ? editorShell.querySelector('[data-editor-drawer-icon]') : document.querySelector('[data-editor-drawer-icon]');
+        var actions = editorShell ? editorShell.querySelector('[data-editor-actions]') : document.querySelector('[data-editor-actions]');
         var container = editorShell ? editorShell.querySelector('[data-editor-container]') : document.querySelector('[data-editor-container]');
         var input = editorShell ? editorShell.querySelector('[data-editor-input]') : document.querySelector('[data-editor-input]');
-        var preview = editorShell ? editorShell.querySelector('[data-editor-preview]') : document.querySelector('[data-editor-preview]');
-        if (!toggle || !container || !input || !preview) {
+        if (!toggle || !drawerToggle || !drawerIcon || !actions || !container || !input) {
           throw new Error('Silmaril editor markup is incomplete');
         }
 
@@ -62,7 +68,8 @@ export const engineeringEditorScript = `
         window.silmarilSourceModel = sourceModel;
         window.silmarilSourceModelMap = sourceMap;
 
-        var isOpen = false;
+        var isEditorOpen = false;
+        var isDrawerOpen = false;
         var currentSlideId = null;
         var renderer = null;
         var markdownItFactory = window.markdownit;
@@ -83,10 +90,6 @@ export const engineeringEditorScript = `
           return renderer.render(value);
         };
 
-        var render = function (markdown) {
-          preview.innerHTML = renderMarkdown(markdown || '');
-        };
-
         var renderActiveSlide = function (markdown) {
           var activeStep = document.querySelector('.step.active');
           var slideContent = activeStep ? activeStep.querySelector('[data-slide-content]') : null;
@@ -100,7 +103,6 @@ export const engineeringEditorScript = `
           if (!slideId) {
             input.value = '';
             input.dataset.slideId = '';
-            render('');
             return;
           }
 
@@ -108,13 +110,11 @@ export const engineeringEditorScript = `
           if (!slide) {
             input.value = '';
             input.dataset.slideId = slideId;
-            render('');
             return;
           }
 
           input.dataset.slideId = slide.id;
           input.value = slide.markdown || '';
-          render(input.value);
         };
 
         var getActiveSlideId = function () {
@@ -126,27 +126,45 @@ export const engineeringEditorScript = `
         };
 
         var syncEditor = function () {
-          if (!isOpen) {
+          if (!isEditorOpen) {
             return;
           }
           bindSlide(getActiveSlideId());
         };
 
         var openEditor = function () {
-          isOpen = true;
+          isEditorOpen = true;
           toggle.setAttribute('aria-expanded', 'true');
           container.removeAttribute('hidden');
           bindSlide(getActiveSlideId());
         };
 
         var closeEditor = function () {
-          isOpen = false;
+          isEditorOpen = false;
           toggle.setAttribute('aria-expanded', 'false');
           container.setAttribute('hidden', '');
         };
 
+        var setDrawerOpen = function (open) {
+          isDrawerOpen = open;
+          drawerToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+          drawerToggle.setAttribute('aria-label', open ? 'Hide editing controls' : 'Show editing controls');
+          drawerToggle.setAttribute('title', open ? 'Hide editing controls' : 'Show editing controls');
+          drawerIcon.textContent = open ? '\\u00bb' : '\\u00ab';
+          if (open) {
+            actions.removeAttribute('hidden');
+          } else {
+            actions.setAttribute('hidden', '');
+            closeEditor();
+          }
+        };
+
+        drawerToggle.addEventListener('click', function () {
+          setDrawerOpen(!isDrawerOpen);
+        });
+
         toggle.addEventListener('click', function () {
-          if (isOpen) {
+          if (isEditorOpen) {
             closeEditor();
           } else {
             openEditor();
@@ -162,7 +180,6 @@ export const engineeringEditorScript = `
 
           var markdown = event.target.value;
           slide.markdown = markdown;
-          render(markdown);
           renderActiveSlide(markdown);
         });
 
@@ -171,8 +188,12 @@ export const engineeringEditorScript = `
         });
 
         document.addEventListener('keydown', function (event) {
-          if (event.key === 'Escape' && isOpen) {
-            closeEditor();
+          if (event.key === 'Escape') {
+            if (isEditorOpen) {
+              closeEditor();
+            } else if (isDrawerOpen) {
+              setDrawerOpen(false);
+            }
           }
         });
 

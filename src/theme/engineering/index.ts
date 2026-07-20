@@ -52,15 +52,24 @@ export function engineeringTheme(): Theme {
       'max-scale': 2,
     },
     overview: 'auto',
-    layout: (regions) => regions.map((region, index) => ({
-      id: region.id,
-      title: region.title,
-      x: index * 1200,
-      y: 0,
-      z: 0,
-      scale: 1,
-      rotate: 0,
-    })),
+    layout: (regions) => {
+      const columns = Math.min(Math.max(regions.length, 1), 5);
+      return regions.map((region, index) => {
+        const row = Math.floor(index / columns);
+        const column = index % columns;
+        const itemsInRow = Math.min(columns, regions.length - row * columns);
+        const rowOffset = ((columns - itemsInRow) * 1200) / 2;
+        return {
+          id: region.id,
+          title: region.title,
+          x: rowOffset + column * 1200,
+          y: row * 900,
+          z: 0,
+          scale: 1,
+          rotate: 0,
+        };
+      });
+    },
     wrapRegion: false,
     renderRegion(region: ThemeRegionDescriptor) {
       return `

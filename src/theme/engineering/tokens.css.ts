@@ -156,7 +156,7 @@ export const engineeringTokensCss = `
 
   .engineering-editor-shell {
     position: fixed;
-    right: 1.25rem;
+    right: 0;
     bottom: 1.25rem;
     z-index: 10000;
     display: inline-flex;
@@ -166,16 +166,55 @@ export const engineeringTokensCss = `
     pointer-events: auto;
   }
 
+  .engineering-editor-drawer {
+    display: inline-flex;
+    align-items: stretch;
+  }
+
   .engineering-editor-actions {
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
     padding: 0.25rem;
     border: 1px solid var(--border);
-    border-radius: 0.75rem;
+    border-radius: 0.75rem 0 0 0.75rem;
     background: color-mix(in srgb, var(--surface) 90%, transparent);
     box-shadow: 0 8px 24px var(--shadow);
     backdrop-filter: blur(12px);
+  }
+
+  .engineering-editor-actions[hidden] {
+    display: none;
+  }
+
+  .engineering-editor-drawer-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.15rem;
+    min-height: 2.5rem;
+    border: 1px solid var(--border);
+    border-right: 0;
+    border-radius: 0.65rem 0 0 0.65rem;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    backdrop-filter: blur(12px);
+    transition: width 180ms ease, background 180ms ease, color 180ms ease;
+  }
+
+  .engineering-editor-drawer-toggle:hover {
+    width: 2.4rem;
+    background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+    color: var(--accent-strong);
+  }
+
+  .engineering-editor-drawer-toggle:focus-visible {
+    outline: 3px solid var(--accent-strong);
+    outline-offset: 3px;
   }
 
   body:has(.step.active[data-id="overview"]) .engineering-editor-shell {
@@ -218,6 +257,7 @@ export const engineeringTokensCss = `
     gap: 0.65rem;
     width: min(30rem, 82vw);
     max-height: min(24rem, 70vh);
+    margin-right: 2.15rem;
     padding: 0.9rem;
     border: 1px solid var(--border);
     border-radius: 0.9rem;
@@ -237,7 +277,7 @@ export const engineeringTokensCss = `
   }
 
   .engineering-editor-panel__input {
-    min-height: 8.5rem;
+    min-height: 11rem;
     border: 1px solid var(--border);
     border-radius: 0.7rem;
     padding: 0.8rem 0.9rem;
@@ -250,17 +290,6 @@ export const engineeringTokensCss = `
   .engineering-editor-panel__input:focus-visible {
     outline: 2px solid var(--accent-strong);
     outline-offset: 2px;
-  }
-
-  .engineering-editor-panel__preview {
-    min-height: 6rem;
-    padding: 0.8rem 0.9rem;
-    border: 1px solid var(--border);
-    border-radius: 0.7rem;
-    background: color-mix(in srgb, var(--surface) 96%, transparent);
-    color: var(--text);
-    font-size: 0.95rem;
-    overflow: auto;
   }
 
   .engineering-toggle {
@@ -341,10 +370,6 @@ export const engineeringTokensCss = `
   }
 
   .engineering-card strong {
-    color: var(--strong);
-  }
-
-  [data-editor-preview] strong {
     color: var(--strong);
   }
 
