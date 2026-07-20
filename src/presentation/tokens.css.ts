@@ -170,7 +170,7 @@ export const engineeringTokensCss = `
   .engineering-mermaid .mermaid-node {
     fill: var(--token-mermaid-node-fill);
     stroke: var(--token-mermaid-node-stroke);
-    stroke-width: 2;
+    stroke-width: 1.5;
   }
 
   .engineering-mermaid .mermaid-node-text {
@@ -183,7 +183,24 @@ export const engineeringTokensCss = `
   .engineering-mermaid .mermaid-edge {
     fill: none;
     stroke: var(--token-mermaid-edge);
-    stroke-width: 2.5;
+    stroke-width: 1.5;
+  }
+
+  .engineering-mermaid .mermaid-arrowhead {
+    fill: var(--token-mermaid-edge);
+    stroke: none;
+  }
+
+  .engineering-mermaid .mermaid-edge-label-bg {
+    fill: var(--surface);
+    opacity: 0.9;
+  }
+
+  .engineering-mermaid .mermaid-edge-label {
+    fill: var(--token-mermaid-label);
+    font-size: 11px;
+    font-weight: 600;
+    font-family: inherit;
   }
 
   .engineering-editor-shell {
