@@ -10,6 +10,7 @@ export const engineeringTokensCss = `
     --light-code-bg: #E8EEF0;
     --light-code-text: #14212C;
     --light-shadow: rgba(15, 23, 42, 0.14);
+    --light-strong: #7C4700;
     --dark-bg: #0B0D0E;
     --dark-surface: #14191D;
     --dark-text: #F3F7F6;
@@ -20,6 +21,7 @@ export const engineeringTokensCss = `
     --dark-code-bg: #1B2228;
     --dark-code-text: #F1FAF7;
     --dark-shadow: rgba(0, 0, 0, 0.42);
+    --dark-strong: #D98C00;
     --surface: var(--dark-surface);
     --text: var(--dark-text);
     --muted: var(--dark-muted);
@@ -29,6 +31,7 @@ export const engineeringTokensCss = `
     --code-bg: var(--dark-code-bg);
     --code-text: var(--dark-code-text);
     --shadow: var(--dark-shadow);
+    --strong: var(--dark-strong);
     --token-mermaid-node-fill: #13384B;
     --token-mermaid-node-stroke: var(--accent);
     --token-mermaid-node-text: var(--text);
@@ -59,6 +62,7 @@ export const engineeringTokensCss = `
     --code-bg: var(--light-code-bg);
     --code-text: var(--light-code-text);
     --shadow: var(--light-shadow);
+    --strong: var(--light-strong);
     --token-mermaid-node-fill: #DFE9EF;
     --token-mermaid-node-stroke: var(--accent);
     --token-mermaid-node-text: var(--text);
@@ -150,6 +154,103 @@ export const engineeringTokensCss = `
     stroke-width: 2.5;
   }
 
+  .engineering-editor-shell {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    z-index: 10000;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.6rem;
+    pointer-events: auto;
+  }
+
+  body:has(.step.active[data-id="overview"]) .engineering-editor-shell {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  .engineering-editor-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    color: var(--text);
+    padding: 0.4rem 0.7rem;
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    pointer-events: auto;
+    backdrop-filter: blur(12px);
+    transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+  }
+
+  .engineering-editor-toggle:hover {
+    transform: translateY(-1px);
+    border-color: var(--accent);
+  }
+
+  .engineering-editor-toggle:focus-visible {
+    outline: 3px solid var(--accent-strong);
+    outline-offset: 3px;
+  }
+
+  .engineering-editor-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    width: min(30rem, 82vw);
+    max-height: min(24rem, 70vh);
+    padding: 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 0.9rem;
+    background: color-mix(in srgb, var(--surface) 90%, transparent);
+    box-shadow: 0 14px 36px var(--shadow);
+    backdrop-filter: blur(14px);
+  }
+
+  .engineering-editor-panel[hidden] {
+    display: none;
+  }
+
+  .engineering-editor-panel__label {
+    color: var(--text);
+    font-size: 0.83rem;
+    font-weight: 600;
+  }
+
+  .engineering-editor-panel__input {
+    min-height: 8.5rem;
+    border: 1px solid var(--border);
+    border-radius: 0.7rem;
+    padding: 0.8rem 0.9rem;
+    background: color-mix(in srgb, var(--surface) 94%, transparent);
+    color: var(--text);
+    font: inherit;
+    resize: vertical;
+  }
+
+  .engineering-editor-panel__input:focus-visible {
+    outline: 2px solid var(--accent-strong);
+    outline-offset: 2px;
+  }
+
+  .engineering-editor-panel__preview {
+    min-height: 6rem;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 0.7rem;
+    background: color-mix(in srgb, var(--surface) 96%, transparent);
+    color: var(--text);
+    font-size: 0.95rem;
+    overflow: auto;
+  }
+
   .engineering-toggle {
     display: inline-flex;
     align-items: center;
@@ -207,6 +308,7 @@ export const engineeringTokensCss = `
     --code-bg: var(--light-code-bg);
     --code-text: var(--light-code-text);
     --shadow: var(--light-shadow);
+    --strong: var(--light-strong);
     background: var(--surface);
     color: var(--text);
   }
@@ -221,8 +323,17 @@ export const engineeringTokensCss = `
     --code-bg: var(--dark-code-bg);
     --code-text: var(--dark-code-text);
     --shadow: var(--dark-shadow);
+    --strong: var(--dark-strong);
     background: var(--surface);
     color: var(--text);
+  }
+
+  .engineering-card strong {
+    color: var(--strong);
+  }
+
+  [data-editor-preview] strong {
+    color: var(--strong);
   }
 
   .engineering-card h2 {
