@@ -37,7 +37,8 @@ export const engineeringExportScript = `
           slides.forEach(function (slide) {
             var title = typeof slide.title === 'string' ? slide.title : '';
             var markdown = typeof slide.markdown === 'string' ? slide.markdown : '';
-            sections.push('## ' + title + (markdown ? '\\n\\n' + markdown : ''));
+            var bodySeparator = markdown.startsWith('\\n') ? '\\n' : '\\n\\n';
+            sections.push('## ' + title + (markdown ? bodySeparator + markdown : ''));
           });
           return sections.join('\\n\\n') + '\\n';
         };

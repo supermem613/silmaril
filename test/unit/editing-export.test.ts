@@ -15,6 +15,8 @@ test("exports the edited deck as Markdown from the source model via File System 
     "Edited body for the first slide.",
     "## Details",
     "",
+    "Second body.",
+    "## Empty",
   ].join("\n");
 
   const board = parseHeadingBoard(source);
@@ -31,11 +33,13 @@ test("exports the edited deck as Markdown from the source model via File System 
   assert.ok(sourcePayloadMatch, "expected the engineering artifact to include the silmaril-source payload for export runtime state");
   const payload = JSON.parse(sourcePayloadMatch[1]) as { title: string; slides: Array<{ id: string; title: string; markdown: string }> };
 
-  assert.ok(payload.slides.length >= 2, "expected at least two ordered slides in the silmaril-source payload");
+  assert.equal(payload.slides.length, 3, "expected all ordered slides in the silmaril-source payload");
   assert.equal(payload.slides[0].title, "Intro", "expected the first slide title to be preserved in order");
   assert.equal(payload.slides[1].title, "Details", "expected the second slide title to be preserved in order");
+  assert.equal(payload.slides[2].title, "Empty", "expected the third slide title to be preserved in order");
   assert.equal(payload.slides[0].markdown, "Edited body for the first slide.", "expected the edited slide markdown to be preserved in the source payload");
-  assert.equal(payload.slides[1].markdown, "", "expected the empty markdown body case to be preserved in the source payload");
+  assert.equal(payload.slides[1].markdown, "\nSecond body.", "expected a source body separator newline to be preserved exactly");
+  assert.equal(payload.slides[2].markdown, "", "expected the empty markdown body case to be preserved in the source payload");
 
   assert.match(html, /<button[^>]+data-export-markdown[^>]*>[\s\S]*?Export Markdown/i, "expected an Export Markdown control in the engineering artifact");
   const exportScriptMatch = html.match(/<script[^>]+data-silmaril-export[^>]*>([\s\S]*?)<\/script>/i);
@@ -62,9 +66,9 @@ test("exports the edited deck as Markdown from the source model via File System 
 
   const editedSlides = [
     { ...payload.slides[0], markdown: "Edited inside Silmaril." },
-    payload.slides[1],
+    ...payload.slides.slice(1),
   ];
-  const expectedMarkdown = "# Markdown Export\n\n## Intro\n\nEdited inside Silmaril.\n\n## Details\n";
+  const expectedMarkdown = "# Markdown Export\n\n## Intro\n\nEdited inside Silmaril.\n\n## Details\n\nSecond body.\n\n## Empty\n";
   const sourceScript = { textContent: JSON.stringify(payload) };
   const body = { appendChild() {} };
 
