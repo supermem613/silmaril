@@ -11,7 +11,7 @@ export const engineeringTokensCss = `
     --light-code-text: #14212C;
     --light-shadow: rgba(15, 23, 42, 0.14);
     --light-strong: #7C4700;
-    --dark-bg: #0B0D0E;
+    --dark-bg: #000000;
     --dark-surface: #14191D;
     --dark-text: #F3F7F6;
     --dark-muted: #B2BDC3;
@@ -44,7 +44,7 @@ export const engineeringTokensCss = `
     height: 100%;
     margin: 0;
     overflow: hidden;
-    background: #0B0D0E;
+    background: var(--dark-bg);
     color: var(--text);
     font-family: "Segoe UI Variable Text", "Aptos", "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;

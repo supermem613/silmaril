@@ -37,7 +37,7 @@ export function engineeringTheme(): Theme {
   return {
     name: 'engineering',
     title: 'Engineering Board',
-    backgroundColor: '#0B0D0E',
+    backgroundColor: '#000000',
     accentColor: '#67D3C2',
     bodyClass: 'engineering-theme',
     viewport: 'width=device-width, initial-scale=1',

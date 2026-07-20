@@ -39,13 +39,10 @@ function loadCanonicalEngineeringDeck(): string {
   return canonicalizeHtml(buildEngineeringHtml(source, dirname(sourcePath)));
 }
 
-test('applies the almost-black engineering color to the page canvas', () => {
+test('applies true black to the engineering page canvas', () => {
   const canonical = loadCanonicalEngineeringDeck();
-  assert.match(
-    canonical,
-    /(?:html\s*,\s*body|\.engineering-theme)[^{]*\{[^}]*background(?:-color)?\s*:\s*#0B0D0E/i,
-    'expected the almost-black engineering color to be applied to the page canvas',
-  );
+  assert.match(canonical, /--dark-bg\s*:\s*#000000/i, 'expected the dark canvas token to use true black');
+  assert.match(canonical, /html\s*,\s*body\.engineering-theme\s*\{[^}]*background\s*:\s*var\(--dark-bg\)/i);
 });
 
 test('keeps the presentation title visible above the whole-board overview', () => {
@@ -102,7 +99,7 @@ test('renders the accepted engineering deck: dark-first tokens, ordered slides, 
   assert.match(canonical, /System Overview/);
   assert.match(canonical, /Delivery Focus/);
   assert.match(canonical, /Operations Readiness/);
-  assert.match(canonical, /#0B0D0E/);
+  assert.match(canonical, /#000000/);
   assert.match(canonical, /<button\b[^>]*>/i);
   assert.match(canonical, /<button\b[^>]*(aria-label|aria-labelledby|title)=/i);
   assert.match(canonical, /light/i);

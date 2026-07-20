@@ -54,6 +54,13 @@ test("embeds a slide-local Markdown editor with live slide rendering, runtime pe
 
   const board = parseHeadingBoard(source);
   const theme = getTheme("engineering");
+  assert.equal(theme.backgroundColor, "#000000", "expected the dark engineering canvas to use true black");
+  assert.match(engineeringTokensCss, /--dark-bg:\s*#000000/i, "expected the dark canvas token to use true black");
+  assert.match(
+    engineeringTokensCss,
+    /html,\s*body\.engineering-theme\s*\{[\s\S]*?background:\s*var\(--dark-bg\)/i,
+    "expected the general dark board area to use the dark canvas token",
+  );
   const regions: Array<Region & { markdownSource: string }> = board.slides.map((slide) => ({
     id: slide.id,
     title: slide.title,
