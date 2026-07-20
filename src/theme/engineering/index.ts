@@ -1,5 +1,6 @@
 import type { Theme, ThemeRegionDescriptor, ThemeSourcePayload } from '../contract.js';
 import { engineeringEditorMarkup, engineeringEditorScript } from './editor.js';
+import { engineeringExportMarkup, engineeringExportScript } from './export.js';
 import { engineeringTokensCss } from './tokens.css.js';
 import { engineeringNavigationScript, engineeringToggleMarkup, engineeringToggleScript } from './toggle.js';
 
@@ -43,7 +44,7 @@ export function engineeringTheme(): Theme {
       </div>
       ${buildSourceScript(sourcePayload)}
       ${version ? `<div class="engineering-board-signature">silmaril · ${escapeHtml(version)}</div>` : ''}
-      ${sourcePayload ? `${engineeringEditorMarkup()}${engineeringEditorScript}` : ''}
+      ${sourcePayload ? `${engineeringEditorMarkup()}${engineeringEditorScript}${engineeringExportMarkup()}${engineeringExportScript}` : ''}
     `,
     impressAttributes: {
       width: 1024,
