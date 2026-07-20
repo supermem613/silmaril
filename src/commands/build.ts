@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, extname, isAbsolute, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { emitJsonFailure, emitJsonSuccess } from "../output.js";
 import { parseHeadingBoard, parseScene } from "../pipeline/parse.js";
 import { layoutScene, selectSparseLayoutPatch } from "../pipeline/layout.js";
@@ -24,6 +25,8 @@ export type OpenOutput = (outputPath: string) => void;
 export interface BuildDependencies {
   openOutput?: OpenOutput;
 }
+
+const PACKAGE_VERSION = (JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "package.json"), "utf8")) as { version: string }).version;
 
 function buildTemporaryPath(outputPath: string): string {
   return `${outputPath}.${process.pid}.tmp`;
@@ -113,6 +116,7 @@ export async function buildCommand(input: string, opts: BuildOptions, deps: Buil
         id: region.id,
         title: region.title,
         content,
+        markdownSource: region.body,
         ...authoredPatch,
       };
     });
@@ -120,7 +124,7 @@ export async function buildCommand(input: string, opts: BuildOptions, deps: Buil
     const documentTitle = boardMode
       ? (parsedBoard as ReturnType<typeof parseHeadingBoard>).title
       : (parsedBoard as ReturnType<typeof parseScene>).attrs.title;
-    const html = assemble(theme, renderedRegions, { documentTitle });
+    const html = assemble(theme, renderedRegions, { documentTitle, version: PACKAGE_VERSION });
     validateBuildOutput(html);
 
     const outputDirectory = dirname(outputPath);

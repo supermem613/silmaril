@@ -106,6 +106,19 @@ export const engineeringTokensCss = `
     line-height: 1;
   }
 
+  .engineering-board-signature {
+    position: absolute;
+    right: 2rem;
+    bottom: 2rem;
+    z-index: 2;
+    color: var(--muted);
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    opacity: 0.9;
+    pointer-events: none;
+  }
+
   html[data-theme="light"] .engineering-board-title,
   body.engineering-theme[data-theme="light"] .engineering-board-title {
     color: #14212c;

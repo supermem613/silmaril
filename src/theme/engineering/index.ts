@@ -1,4 +1,4 @@
-import type { Theme, ThemeRegionDescriptor } from '../contract.js';
+import type { Theme, ThemeRegionDescriptor, ThemeSourcePayload } from '../contract.js';
 import { engineeringTokensCss } from './tokens.css.js';
 import { engineeringNavigationScript, engineeringToggleMarkup, engineeringToggleScript } from './toggle.js';
 
@@ -11,6 +11,21 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
+function escapeJsonScriptText(value: string): string {
+  return value
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026');
+}
+
+function buildSourceScript(sourcePayload: ThemeSourcePayload | undefined): string {
+  if (!sourcePayload) {
+    return '';
+  }
+
+  return `<script type="application/json" id="silmaril-source">${escapeJsonScriptText(JSON.stringify(sourcePayload, null, 2))}</script>`;
+}
+
 export function engineeringTheme(): Theme {
   return {
     name: 'engineering',
@@ -21,10 +36,12 @@ export function engineeringTheme(): Theme {
     viewport: 'width=device-width, initial-scale=1',
     globalCss: engineeringTokensCss,
     scenery: () => `${engineeringToggleMarkup()}${engineeringToggleScript}${engineeringNavigationScript}`,
-    renderOverview: ({ documentTitle }) => `
+    renderOverview: ({ documentTitle, version, sourcePayload }) => `
       <div class="engineering-board-title">
         <h1>${escapeHtml(documentTitle)}</h1>
       </div>
+      ${buildSourceScript(sourcePayload)}
+      ${version ? `<div class="engineering-board-signature">silmaril · ${escapeHtml(version)}</div>` : ''}
     `,
     impressAttributes: {
       width: 1024,
