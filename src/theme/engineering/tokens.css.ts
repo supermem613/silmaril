@@ -385,6 +385,12 @@ export const engineeringTokensCss = `
     color: var(--text);
   }
 
+  body:not(:has(.step.active[data-id="overview"])) .step.active .engineering-card[data-theme="dark"] {
+    background: #000000;
+    border-color: transparent;
+    box-shadow: none;
+  }
+
   .engineering-card strong {
     color: var(--strong);
   }

@@ -122,6 +122,15 @@ test("embeds a slide-local Markdown editor with live slide rendering, runtime pe
   assert.ok(engineeringCardStrongRule, "expected a .engineering-card strong CSS rule for the rendered slide strong emphasis styling");
   assert.match(engineeringCardStrongRule ?? "", /color:\s*var\(--strong\)/i, "expected .engineering-card strong to use color var(--strong)");
 
+  const focusedDarkCardRule = extractCssRule(
+    engineeringTokensCss,
+    "body:not(:has(.step.active[data-id=\"overview\"])) .step.active .engineering-card[data-theme=\"dark\"]",
+  );
+  assert.ok(focusedDarkCardRule, "expected a focused dark-slide surface rule");
+  assert.match(focusedDarkCardRule ?? "", /background:\s*#000(?:000)?/i, "expected the focused dark slide to use true black");
+  assert.match(focusedDarkCardRule ?? "", /border-color:\s*transparent/i, "expected the focused dark slide border to disappear");
+  assert.match(focusedDarkCardRule ?? "", /box-shadow:\s*none/i, "expected the focused dark slide shadow to disappear");
+
   assert.match(engineeringTokensCss, /:root\s*\{[\s\S]*?--strong:\s*var\(--dark-strong\)/i, "expected the root dark defaults to bind --strong to --dark-strong");
   assert.match(engineeringTokensCss, /html\[data-theme="light"\][\s\S]*?--strong:\s*var\(--light-strong\)/i, "expected the light document theme block to bind --strong to --light-strong");
   assert.match(engineeringTokensCss, /\.engineering-card\[data-theme="light"\][\s\S]*?--strong:\s*var\(--light-strong\)/i, "expected .engineering-card[data-theme=light] to bind --strong to --light-strong");
