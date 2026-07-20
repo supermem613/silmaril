@@ -129,6 +129,15 @@ test("embeds a slide-local Markdown editor with live slide rendering, runtime pe
   assert.ok(engineeringCardStrongRule, "expected a .engineering-card strong CSS rule for the rendered slide strong emphasis styling");
   assert.match(engineeringCardStrongRule ?? "", /color:\s*var\(--strong\)/i, "expected .engineering-card strong to use color var(--strong)");
 
+  const darkCardRule = extractCssRule(engineeringTokensCss, ".engineering-card[data-theme=\"dark\"]");
+  assert.ok(darkCardRule, "expected a dark engineering card surface rule");
+  assert.match(darkCardRule ?? "", /background:\s*#000000/i, "expected dark overview cards to use true black");
+
+  const engineeringCardRule = extractCssRule(engineeringTokensCss, ".engineering-card");
+  assert.ok(engineeringCardRule, "expected the shared engineering card rule");
+  assert.match(engineeringCardRule ?? "", /border:\s*1px solid var\(--border\)/i, "expected overview cards to retain their boundary");
+  assert.match(engineeringCardRule ?? "", /box-shadow:\s*0 18px 40px var\(--shadow\)/i, "expected overview cards to retain their depth");
+
   const focusedDarkCardRule = extractCssRule(
     engineeringTokensCss,
     "body:not(:has(.step.active[data-id=\"overview\"])) .step.active .engineering-card[data-theme=\"dark\"]",

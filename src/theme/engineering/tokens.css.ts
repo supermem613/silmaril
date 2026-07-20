@@ -381,7 +381,7 @@ export const engineeringTokensCss = `
     --code-text: var(--dark-code-text);
     --shadow: var(--dark-shadow);
     --strong: var(--dark-strong);
-    background: var(--surface);
+    background: #000000;
     color: var(--text);
   }
 
