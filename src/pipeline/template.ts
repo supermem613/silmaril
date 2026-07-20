@@ -89,8 +89,11 @@ export function renderTemplate(options: TemplateOptions): string {
   const impressAttributes = Object.entries(options.theme.impressAttributes ?? {})
     .map(([name, value]) => ` data-${escapeHtml(name)}="${escapeHtml(String(value))}"`)
     .join('');
-  const scenery = options.theme.scenery?.trim()
-    ? `\n${options.theme.scenery.trim()}`
+  const renderedScenery = typeof options.theme.scenery === 'function'
+    ? options.theme.scenery({ theme: options.theme, documentTitle: options.title })
+    : options.theme.scenery;
+  const scenery = renderedScenery?.trim()
+    ? `\n${renderedScenery.trim()}`
     : '';
   const fallback = options.theme.fallbackHtml?.trim()
     ? `\n    ${options.theme.fallbackHtml.trim()}`

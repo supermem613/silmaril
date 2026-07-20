@@ -72,14 +72,15 @@ export async function buildCommand(input: string, opts: BuildOptions, deps: Buil
     const inputDirectory = dirname(inputPath);
     const markdown = readFileSync(inputPath, "utf8");
     const scene = parseScene(markdown);
-    const themeName = opts.theme ?? scene.theme ?? "cards";
+    const themeName = opts.theme ?? scene.theme ?? "engineering";
     if (themeName !== "cards" && themeName !== "atlas" && themeName !== "sketch" && themeName !== "engineering") {
       throw buildError("--theme must be one of cards, atlas, sketch, engineering");
     }
 
     const theme = getTheme(themeName);
     const boardMode = themeName === "engineering";
-    const parsedBoard = boardMode ? parseHeadingBoard(markdown) : scene;
+    const inputTitle = basename(inputPath, extname(inputPath));
+    const parsedBoard = boardMode ? parseHeadingBoard(markdown, inputTitle) : scene;
     const regions = boardMode
       ? (parsedBoard as ReturnType<typeof parseHeadingBoard>).slides
       : (parsedBoard as ReturnType<typeof parseScene>).regions;

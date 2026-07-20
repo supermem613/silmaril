@@ -26,7 +26,7 @@ The parser accepts simple scalars (`true`, `false`, `null`, strings, numbers) an
 
 ## 2. Region grammar
 
-For the `engineering` theme, use one `#` heading for the board title and one `##` heading for each ordered slide:
+For the `engineering` theme, use one `#` heading for the board title and one `##` heading for each ordered slide. If the `#` heading is omitted, Silmaril uses the Markdown filename without its extension as the board title:
 
 ````md
 # Service readiness
@@ -123,7 +123,7 @@ The repository showcase sources demonstrate the richer conventions for each acce
 - [atlas-tour.md](../examples/atlas-tour.md)
 - [sketch-tour.md](../examples/sketch-tour.md)
 
-If neither frontmatter nor `--theme` selects a theme, Silmaril uses `cards`. An explicit `--theme` always wins over frontmatter.
+If neither frontmatter nor `--theme` selects a theme, Silmaril uses `engineering` and reads the `#` document title plus `##` slides. Without a `#` heading, the Markdown filename becomes the document title. An explicit `--theme` always wins over frontmatter.
 
 ## 6. Determinism and self-hosting
 

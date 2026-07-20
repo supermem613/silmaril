@@ -169,6 +169,7 @@ function createAutoOverviewStep(placements: readonly ThemeLayoutPlacement[]): Te
 }
 
 export function assemble(theme: Theme, regions: readonly Region[], options: AssembleOptions = {}): string {
+  const documentTitle = options.documentTitle ?? theme.title ?? 'Zoomable Canvas';
   const descriptors = regions.map(toThemeRegion);
   const validationErrors = theme.validate?.(theme, descriptors);
   if (Array.isArray(validationErrors)) {
@@ -184,13 +185,22 @@ export function assemble(theme: Theme, regions: readonly Region[], options: Asse
   const steps = descriptors.map((region, index) => createStep(theme, region, placements[index] ?? createFallbackPlacement(region, index)));
 
   if (theme.overview === 'auto') {
-    steps.unshift(createAutoOverviewStep(placements));
+    const overviewContent = theme.renderOverview?.({ theme, documentTitle }) ?? '';
+    const overviewStep = createAutoOverviewStep(placements);
+    steps.unshift({
+      ...overviewStep,
+      content: overviewContent,
+      className: overviewContent ? 'camera-overview engineering-board-overview' : overviewStep.className,
+      style: overviewContent
+        ? 'width:1024px;height:768px;padding:0;background:transparent;border:0;box-shadow:none;pointer-events:none'
+        : overviewStep.style,
+    });
   } else if (theme.overview !== false) {
     steps.push(createOverviewStep(theme.overview));
   }
 
   return renderTemplate({
-    title: options.documentTitle ?? theme.title ?? 'Zoomable Canvas',
+    title: documentTitle,
     theme,
     steps,
     impressScript: getImpressScript(),

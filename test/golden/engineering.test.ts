@@ -33,6 +33,62 @@ function buildEngineeringHtml(source: string, inputDirectory: string): string {
   return html;
 }
 
+function loadCanonicalEngineeringDeck(): string {
+  const sourcePath = fileURLToPath(new URL('../corpus/cases/engineering-deck.md', import.meta.url));
+  const source = readFileSync(sourcePath, 'utf8');
+  return canonicalizeHtml(buildEngineeringHtml(source, dirname(sourcePath)));
+}
+
+test('applies the almost-black engineering color to the page canvas', () => {
+  const canonical = loadCanonicalEngineeringDeck();
+  assert.match(
+    canonical,
+    /(?:html\s*,\s*body|\.engineering-theme)[^{]*\{[^}]*background(?:-color)?\s*:\s*#0B0D0E/i,
+    'expected the almost-black engineering color to be applied to the page canvas',
+  );
+});
+
+test('keeps the presentation title visible above the whole-board overview', () => {
+  const canonical = loadCanonicalEngineeringDeck();
+  const body = canonical.slice(canonical.indexOf('<body'));
+  assert.match(body, /engineering-board-title[\s\S]*<h1>Engineering Board<\/h1>/i);
+});
+
+test('keeps engineering chrome minimal and slide typography readable', () => {
+  const canonical = loadCanonicalEngineeringDeck();
+  assert.match(canonical, /:root\s*\{[^}]*--dark-text\s*:\s*#F3F7F6/i);
+  assert.match(canonical, /font-family\s*:\s*"Segoe UI Variable Text"/i);
+  assert.doesNotMatch(canonical, /engineering-card__eyebrow/i);
+  assert.doesNotMatch(canonical, /engineering-shell__title/i);
+  assert.doesNotMatch(canonical, /Engineering presentation/i);
+  assert.match(canonical, /shell\.parentElement !== document\.body/);
+  assert.match(canonical, /body:not\(:has\(\.step\.active\[data-id="overview"\]\)\) \.engineering-shell/);
+
+  const headingRule = canonical.match(/\.engineering-card h2\s*\{([^}]*)\}/i)?.[1] ?? '';
+  const headingSize = Number(headingRule.match(/font-size\s*:\s*([\d.]+)rem/i)?.[1] ?? 0);
+  assert.ok(headingSize >= 2.5, `expected readable slide headings, received ${headingSize}rem`);
+});
+
+test('animates board navigation and opens slides by click', () => {
+  const canonical = loadCanonicalEngineeringDeck();
+  assert.match(canonical, /active\[data-id="overview"\]/);
+  assert.match(canonical, /closest\('\.step:not\(\.overview\)'\)/);
+  assert.match(canonical, /impress\(\)\.goto\(step\)/);
+  assert.match(canonical, /impress\(\)\.goto\(overview\)/);
+  assert.doesNotMatch(canonical, /impress\(\)\.goto\(overview, 0\)/);
+});
+
+test('sizes focused engineering cards to use most of the viewport', () => {
+  const canonical = loadCanonicalEngineeringDeck();
+  assert.match(canonical, /<div id="impress"[^>]*data-max-scale="2"/i);
+  const cardRule = canonical.match(/\.engineering-card\s*\{([^}]*)\}/i)?.[1] ?? '';
+  const cardWidth = Number(cardRule.match(/\bwidth\s*:\s*(\d+)px/i)?.[1] ?? 0);
+  const cardMinHeight = Number(cardRule.match(/\bmin-height\s*:\s*(\d+)px/i)?.[1] ?? 0);
+  assert.ok(cardWidth >= 1000, `expected focused engineering cards to use the viewport width, received ${cardWidth}px`);
+  assert.ok(cardMinHeight >= 700, `expected focused engineering cards to use the viewport height, received ${cardMinHeight}px`);
+  assert.match(canonical, /data-x="1200"[^>]*data-id="delivery-focus"/i);
+});
+
 test('renders the accepted engineering deck: dark-first tokens, ordered slides, and a persistent labelled light-mode toggle', () => {
   const sourcePath = fileURLToPath(new URL('../corpus/cases/engineering-deck.md', import.meta.url));
   const source = readFileSync(sourcePath, 'utf8');
@@ -54,6 +110,12 @@ test('renders the accepted engineering deck: dark-first tokens, ordered slides, 
   assert.match(canonical, /--dark-[^:]+:/i);
   assert.match(canonical, /data-theme|data-attribute|data-.*theme/i);
   assert.match(canonical, /prefers-reduced-motion/i);
+  assert.match(canonical, /event\.key === 'Tab'/);
+  assert.match(canonical, /document\.addEventListener\('DOMContentLoaded', installNavigation/);
+  assert.match(canonical, /window\.addEventListener\('keyup', handleNavigation, true\)/);
+  assert.match(canonical, /active === lastSlide/);
+  assert.match(canonical, /data-id="overview"/);
+  assert.match(canonical, /impress\(\)\.goto\(overview\)/);
   assert.doesNotMatch(canonical, /Math\.random/);
   assert.doesNotMatch(canonical, /prefers-color-scheme/i);
 

@@ -160,6 +160,48 @@ describe("cli contract", () => {
     assert.match(overrideHtml, /<h2>Alpha<\/h2>/);
   });
 
+  it("uses heading-structured engineering slides by default without frontmatter", () => {
+    const dir = mkdtempSync(join(tmpdir(), "silmaril-build-engineering-default-"));
+    tempDirs.push(dir);
+    const markdownPath = writeTempMarkdown(
+      dir,
+      "scene.md",
+      "# Default Engineering Deck\n\n## Opening\n\nWelcome\n\n## Detail\n\nSupporting detail\n",
+    );
+    const outPath = join(dir, "scene.html");
+
+    const build = runCli(["build", markdownPath, "--out", outPath]);
+    assert.equal(build.status, 0, build.stderr || build.stdout);
+    const payload = readJson(build.stdout) as { data: { theme: string } };
+    assert.equal(payload.data.theme, "engineering");
+
+    const html = readFileSync(outPath, "utf8");
+    assert.match(html, /<title>Default Engineering Deck<\/title>/);
+    assert.match(html, /engineering-board-title[\s\S]*Default Engineering Deck/);
+    assert.match(html, /<h2>Opening<\/h2>/);
+    assert.match(html, /<h2>Detail<\/h2>/);
+  });
+
+  it("uses the Markdown filename as the engineering title when no level-one heading exists", () => {
+    const dir = mkdtempSync(join(tmpdir(), "silmaril-build-obsidian-title-"));
+    tempDirs.push(dir);
+    const markdownPath = writeTempMarkdown(
+      dir,
+      "Obsidian Note.md",
+      "## Opening\n\nWelcome\n\n## Detail\n\nSupporting detail\n",
+    );
+    const outPath = join(dir, "obsidian-note.html");
+
+    const build = runCli(["build", markdownPath, "--out", outPath]);
+    assert.equal(build.status, 0, build.stderr || build.stdout);
+
+    const html = readFileSync(outPath, "utf8");
+    assert.match(html, /<title>Obsidian Note<\/title>/);
+    assert.match(html, /engineering-board-title[\s\S]*<h1>Obsidian Note<\/h1>/);
+    assert.match(html, /<h2>Opening<\/h2>/);
+    assert.match(html, /<h2>Detail<\/h2>/);
+  });
+
   it("inlines local images relative to the markdown source", () => {
     const dir = mkdtempSync(join(tmpdir(), "silmaril-build-"));
     tempDirs.push(dir);
@@ -210,7 +252,7 @@ describe("cli contract", () => {
     const dir = mkdtempSync(join(tmpdir(), "silmaril-build-"));
     tempDirs.push(dir);
     const sourceName = basename(dir);
-    const markdownPath = writeTempMarkdown(dir, `${sourceName}.md`, "---\ntitle: Demo\n---\n\n- Alpha\n  - body\n");
+    const markdownPath = writeTempMarkdown(dir, `${sourceName}.md`, "# Demo\n\n## Alpha\n\nbody\n");
     const outPath = join(tmpdir(), `${sourceName}.html`);
     tempFiles.push(outPath);
 
@@ -224,7 +266,7 @@ describe("cli contract", () => {
     assert.equal(buildPayload.ok, true);
     assert.equal(buildPayload.command, "build");
     assert.equal(buildPayload.data.outputPath, outPath);
-    assert.equal(buildPayload.data.theme, "cards");
+    assert.equal(buildPayload.data.theme, "engineering");
     assert.ok(existsSync(outPath));
     assert.deepEqual(readdirSync(dir).filter((name) => name.endsWith(".html")), []);
   });

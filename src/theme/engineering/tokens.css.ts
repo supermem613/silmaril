@@ -1,25 +1,25 @@
 export const engineeringTokensCss = `
-  .engineering-shell {
-    --light-bg: #f4f3eb;
-    --light-surface: #fcfbf4;
-    --light-text: #14212c;
-    --light-muted: #506174;
-    --light-border: #b7b49e;
-    --light-accent: #1f6f8b;
-    --light-accent-strong: #0d4657;
-    --light-code-bg: #f0ebdf;
-    --light-code-text: #1f3140;
-    --light-shadow: rgba(15, 23, 42, 0.16);
+  :root {
+    --light-bg: #EEF2F3;
+    --light-surface: #FFFFFF;
+    --light-text: #111820;
+    --light-muted: #52606B;
+    --light-border: #C8D0D5;
+    --light-accent: #136F63;
+    --light-accent-strong: #0B5148;
+    --light-code-bg: #E8EEF0;
+    --light-code-text: #14212C;
+    --light-shadow: rgba(15, 23, 42, 0.14);
     --dark-bg: #0B0D0E;
-    --dark-surface: #12161A;
+    --dark-surface: #14191D;
     --dark-text: #F3F7F6;
-    --dark-muted: #8A959D;
-    --dark-border: #2A3338;
+    --dark-muted: #B2BDC3;
+    --dark-border: #354047;
     --dark-accent: #67D3C2;
-    --dark-accent-strong: #8CE4D3;
-    --dark-code-bg: #171C22;
-    --dark-code-text: #E8F4F0;
-    --dark-shadow: rgba(0, 0, 0, 0.36);
+    --dark-accent-strong: #9BE9DC;
+    --dark-code-bg: #1B2228;
+    --dark-code-text: #F1FAF7;
+    --dark-shadow: rgba(0, 0, 0, 0.42);
     --surface: var(--dark-surface);
     --text: var(--dark-text);
     --muted: var(--dark-muted);
@@ -29,27 +29,27 @@ export const engineeringTokensCss = `
     --code-bg: var(--dark-code-bg);
     --code-text: var(--dark-code-text);
     --shadow: var(--dark-shadow);
-    --token-mermaid-node-fill: #13384b;
+    --token-mermaid-node-fill: #13384B;
     --token-mermaid-node-stroke: var(--accent);
     --token-mermaid-node-text: var(--text);
     --token-mermaid-edge: var(--accent-strong);
     --token-mermaid-label: var(--muted);
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    margin: 0 auto 1.25rem;
-    padding: 1rem 1.25rem;
-    max-width: 980px;
-    border: 1px solid var(--border);
-    border-radius: 1rem;
-    background: linear-gradient(140deg, var(--dark-bg), var(--surface));
-    box-shadow: 0 20px 40px var(--shadow);
-    color: var(--text);
-    font-family: "Inter", "Segoe UI", Roboto, sans-serif;
-    line-height: 1.5;
   }
 
-  .engineering-shell[data-theme="light"] {
+  html,
+  body.engineering-theme {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: #0B0D0E;
+    color: var(--text);
+    font-family: "Segoe UI Variable Text", "Aptos", "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  html[data-theme="light"],
+  body.engineering-theme[data-theme="light"] {
     --surface: var(--light-surface);
     --text: var(--light-text);
     --muted: var(--light-muted);
@@ -59,12 +59,56 @@ export const engineeringTokensCss = `
     --code-bg: var(--light-code-bg);
     --code-text: var(--light-code-text);
     --shadow: var(--light-shadow);
-    --token-mermaid-node-fill: #dfe9ef;
+    --token-mermaid-node-fill: #DFE9EF;
     --token-mermaid-node-stroke: var(--accent);
     --token-mermaid-node-text: var(--text);
     --token-mermaid-edge: var(--accent);
     --token-mermaid-label: var(--muted);
-    background: linear-gradient(140deg, var(--light-bg), var(--surface));
+    background: var(--light-bg);
+  }
+
+  .engineering-shell {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 10000;
+    pointer-events: none;
+    transition: opacity 180ms ease, transform 180ms ease;
+  }
+
+  body:not(:has(.step.active[data-id="overview"])) .engineering-shell {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+
+  body:not(:has(.step.active[data-id="overview"])) .engineering-toggle {
+    pointer-events: none;
+  }
+
+  .engineering-board-overview {
+    position: relative;
+  }
+
+  .engineering-board-title {
+    position: absolute;
+    top: 2rem;
+    left: 3rem;
+    right: 3rem;
+    color: var(--text);
+    font-family: "Segoe UI Variable Display", "Aptos Display", "Segoe UI", sans-serif;
+  }
+
+  .engineering-board-title h1 {
+    margin: 0;
+    font-size: 3.4rem;
+    font-weight: 650;
+    letter-spacing: -0.035em;
+    line-height: 1;
+  }
+
+  html[data-theme="light"] .engineering-board-title,
+  body.engineering-theme[data-theme="light"] .engineering-board-title {
+    color: #14212c;
   }
 
   .engineering-mermaid {
@@ -93,46 +137,21 @@ export const engineeringTokensCss = `
     stroke-width: 2.5;
   }
 
-  .engineering-shell__toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  .engineering-shell__title {
-    display: flex;
-    flex-direction: column;
-    gap: 0.12rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    font-size: 0.73rem;
-    color: var(--accent);
-  }
-
-  .engineering-shell__title span:last-child {
-    color: var(--text);
-    font-size: 0.95rem;
-    letter-spacing: 0.02em;
-    text-transform: none;
-    font-weight: 600;
-  }
-
   .engineering-toggle {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.55rem;
     border: 1px solid var(--border);
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
     color: var(--text);
-    padding: 0.6rem 0.9rem;
-    font-size: 0.95rem;
+    padding: 0.45rem 0.75rem;
+    font-family: inherit;
+    font-size: 0.78rem;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    pointer-events: auto;
+    backdrop-filter: blur(12px);
     transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
   }
 
@@ -149,14 +168,20 @@ export const engineeringTokensCss = `
   .engineering-card {
     display: flex;
     flex-direction: column;
-    gap: 0.9rem;
+    gap: 1.35rem;
+    width: 1000px;
+    min-height: 700px;
+    box-sizing: border-box;
     border: 1px solid var(--border);
     border-radius: 1rem;
-    padding: 1.2rem 1.3rem;
+    padding: 3rem 3.5rem;
     background: var(--surface);
     color: var(--text);
     box-shadow: 0 18px 40px var(--shadow);
-    transition: background 180ms ease, color 180ms ease, border-color 180ms ease;
+    font-family: "Segoe UI Variable Text", "Aptos", "Segoe UI", sans-serif;
+    font-size: 1.35rem;
+    line-height: 1.5;
+    transition: transform 240ms ease, background 180ms ease, color 180ms ease, border-color 180ms ease, box-shadow 240ms ease;
   }
 
   .engineering-card[data-theme="light"] {
@@ -187,22 +212,13 @@ export const engineeringTokensCss = `
     color: var(--text);
   }
 
-  .engineering-card__eyebrow {
-    display: inline-flex;
-    width: fit-content;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 0.25rem 0.6rem;
-    font-size: 0.75rem;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--accent);
-    background: rgba(103, 211, 194, 0.12);
-  }
-
   .engineering-card h2 {
     margin: 0;
-    font-size: 1.6rem;
+    font-family: "Segoe UI Variable Display", "Aptos Display", "Segoe UI", sans-serif;
+    font-size: 3rem;
+    font-weight: 650;
+    letter-spacing: -0.035em;
+    line-height: 1.05;
     color: var(--text);
   }
 
@@ -215,6 +231,31 @@ export const engineeringTokensCss = `
 
   .engineering-card p {
     margin: 0;
+  }
+
+  .engineering-card ul,
+  .engineering-card ol {
+    margin: 0;
+    padding-left: 1.4em;
+  }
+
+  .engineering-card li + li {
+    margin-top: 0.35em;
+  }
+
+  body:has(.step.active[data-id="overview"]) .step:not(.overview) {
+    cursor: pointer;
+  }
+
+  body:has(.step.active[data-id="overview"]) .step:not(.overview):hover .engineering-card,
+  body:has(.step.active[data-id="overview"]) .step:not(.overview):focus-visible .engineering-card {
+    transform: translateY(-12px) scale(1.015);
+    border-color: var(--accent);
+    box-shadow: 0 28px 60px var(--shadow);
+  }
+
+  body:has(.step.active[data-id="overview"]) .step:not(.overview):focus-visible {
+    outline: none;
   }
 
   .engineering-card table {

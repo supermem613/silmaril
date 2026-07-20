@@ -21,7 +21,7 @@ Silmaril compiles annotated Markdown into a deterministic single-file HTML canva
 node dist/cli.js build docs/examples/quick.md
 ```
 
-The frontmatter `title` becomes the HTML document title. Every theme opens on an empty whole-board overview derived from the actual region bounds, and deterministic auto-layout gives each unpositioned region a distinct place. Pass `--theme` to override the frontmatter theme or `--out` to choose the output path.
+Plain Markdown is the default: `#` becomes the presentation title and each `##` becomes an engineering slide. When `#` is omitted, the Markdown filename becomes the presentation title, which keeps Obsidian notes presentation-ready without extra metadata. The presentation opens on a whole-board overview derived from the actual slide bounds. Pass `--theme` only when selecting a legacy theme, or `--out` to choose the output path.
 
 The `engineering` theme uses `#` for the board title and `##` for ordered slides. Fenced Mermaid flowcharts are compiled into deterministic inline SVG during the build, with no Mermaid runtime or remote diagram dependency in the generated HTML.
 

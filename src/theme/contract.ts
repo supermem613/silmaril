@@ -40,6 +40,13 @@ export interface ThemeOverview {
   readonly className?: string;
 }
 
+export interface ThemeSceneryContext {
+  readonly theme: Theme;
+  readonly documentTitle: string;
+}
+
+export type ThemeOverviewContext = ThemeSceneryContext;
+
 export interface Theme {
   readonly name: string;
   readonly title?: string;
@@ -54,7 +61,8 @@ export interface Theme {
   readonly sceneryCss?: string;
   readonly regionCss?: string;
   readonly css?: string;
-  readonly scenery?: string;
+  readonly scenery?: string | ((context: ThemeSceneryContext) => string);
+  readonly renderOverview?: (context: ThemeOverviewContext) => string;
   readonly wrapRegion?: boolean;
   readonly overview?: ThemeOverview | 'auto' | false;
   readonly stepClassName?: (

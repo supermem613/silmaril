@@ -24,9 +24,9 @@ export function parseScene(markdown: string): SceneIR {
   return scene;
 }
 
-export function parseHeadingBoard(markdown: string): BoardIR {
+export function parseHeadingBoard(markdown: string, fallbackTitle?: string): BoardIR {
   const { content, attrs } = parseFrontmatter(markdown);
-  const boardTitle = parseBoardTitle(content) ?? attrs.title ?? "Board";
+  const boardTitle = parseBoardTitle(content) ?? fallbackTitle ?? attrs.title ?? "Board";
   const slides = parseHeadingBoardRegions(content);
   const sceneAttrs: SceneAttrs = { ...attrs, title: boardTitle };
   const theme = sceneAttrs.theme ?? null;
