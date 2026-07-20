@@ -2,7 +2,12 @@ import type { Theme, ThemeRegionDescriptor, ThemeSourcePayload } from '../contra
 import { engineeringEditorMarkup, engineeringEditorScript } from './editor.js';
 import { engineeringExportMarkup, engineeringExportScript } from './export.js';
 import { engineeringTokensCss } from './tokens.css.js';
-import { engineeringNavigationScript, engineeringToggleMarkup, engineeringToggleScript } from './toggle.js';
+import {
+  engineeringNavigationScript,
+  engineeringProgressMarkup,
+  engineeringToggleMarkup,
+  engineeringToggleScript,
+} from './toggle.js';
 
 function escapeHtml(value: string): string {
   return value
@@ -37,7 +42,7 @@ export function engineeringTheme(): Theme {
     bodyClass: 'engineering-theme',
     viewport: 'width=device-width, initial-scale=1',
     globalCss: engineeringTokensCss,
-    scenery: () => `${engineeringToggleMarkup()}${engineeringToggleScript}${engineeringNavigationScript}`,
+    scenery: () => `${engineeringToggleMarkup()}${engineeringProgressMarkup()}${engineeringToggleScript}${engineeringNavigationScript}`,
     renderOverview: ({ documentTitle, version, sourcePayload }) => `
       <div class="engineering-board-title">
         <h1>${escapeHtml(documentTitle)}</h1>
@@ -47,8 +52,8 @@ export function engineeringTheme(): Theme {
       ${sourcePayload ? `${engineeringEditorMarkup()}${engineeringEditorScript}${engineeringExportMarkup()}${engineeringExportScript}` : ''}
     `,
     impressAttributes: {
-      width: 1024,
-      height: 768,
+      width: 1120,
+      height: 820,
       'max-scale': 2,
     },
     overview: 'auto',

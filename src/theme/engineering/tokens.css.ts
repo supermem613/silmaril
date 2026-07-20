@@ -123,6 +123,22 @@ export const engineeringTokensCss = `
     pointer-events: none;
   }
 
+  .engineering-slide-progress {
+    position: fixed;
+    left: 1.25rem;
+    bottom: 1.25rem;
+    z-index: 10000;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    pointer-events: none;
+  }
+
+  .engineering-slide-progress[hidden] {
+    display: none;
+  }
+
   html[data-theme="light"] .engineering-board-title,
   body.engineering-theme[data-theme="light"] .engineering-board-title {
     color: #14212c;

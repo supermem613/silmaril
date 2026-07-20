@@ -8,6 +8,14 @@ export function engineeringToggleMarkup(): string {
 `;
 }
 
+export function engineeringProgressMarkup(): string {
+  return `
+  <div class="engineering-slide-progress" data-slide-progress aria-live="polite" hidden>
+    <span data-slide-progress-current>1</span> / <span data-slide-progress-total>1</span>
+  </div>
+`;
+}
+
 export const engineeringToggleScript = `
   <script>
     (function () {
@@ -78,6 +86,40 @@ export const engineeringNavigationScript = `
       var installNavigation = function () {
         var overview = document.querySelector('.step[data-id="overview"]');
         var slides = Array.prototype.slice.call(document.querySelectorAll('.step:not(.overview)'));
+        var progress = document.querySelector('[data-slide-progress]');
+        var progressCurrent = progress ? progress.querySelector('[data-slide-progress-current]') : null;
+        var progressTotal = progress ? progress.querySelector('[data-slide-progress-total]') : null;
+        if (progress && progress.parentElement !== document.body) {
+          document.body.appendChild(progress);
+        }
+        var updateProgress = function () {
+          if (!progress || !progressCurrent || !progressTotal) {
+            return;
+          }
+          var active = document.querySelector('.step.active');
+          var index = slides.indexOf(active);
+          if (index < 0) {
+            progress.setAttribute('hidden', '');
+            return;
+          }
+          progressCurrent.textContent = String(index + 1);
+          progressTotal.textContent = String(slides.length);
+          progress.removeAttribute('hidden');
+        };
+        var refreshScheduled = false;
+        var scheduleGeometryRefresh = function () {
+          if (refreshScheduled) {
+            return;
+          }
+          refreshScheduled = true;
+          window.requestAnimationFrame(function () {
+            refreshScheduled = false;
+            var active = document.querySelector('.step.active');
+            if (active && typeof window.impress === 'function') {
+              window.impress().goto(active, 0);
+            }
+          });
+        };
         var goToOverview = function () {
           if (overview && typeof window.impress === 'function') {
             window.impress().goto(overview);
@@ -142,9 +184,15 @@ export const engineeringNavigationScript = `
         });
         document.addEventListener('click', openBoardStep);
         document.addEventListener('keydown', openBoardStep);
+        document.addEventListener('impress:stepenter', updateProgress);
         window.addEventListener('keydown', preserveBrowserRefresh, true);
         window.addEventListener('keydown', handleNavigation, true);
         window.addEventListener('keyup', handleNavigation, true);
+        window.addEventListener('resize', scheduleGeometryRefresh);
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', scheduleGeometryRefresh);
+        }
+        updateProgress();
       };
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', installNavigation, { once: true });
