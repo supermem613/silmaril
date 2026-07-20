@@ -1,195 +1,92 @@
-# Silmaril 50-region performance fixture
+# Engineering review performance fixture
 
-<!-- region: 01 type=text -->
-The opening paragraph introduces the benchmark topic with enough prose to exercise parsing and layout heuristics.
+## Executive summary
 
-<!-- region: 02 type=text -->
-This second paragraph focuses on pacing, readability, and a balanced cadence for repeated rendering passes.
+The system is ready for the next rollout stage.
 
-<!-- region: 03 type=text -->
-A short paragraph keeps the fixture compact while still exercising text segmentation across multiple blocks.
+## User impact
 
-<!-- region: 04 type=text -->
-Longer examples add content variety so the parser sees mixed sentence structure and punctuation patterns.
+The current cohort sees lower latency and fewer retries.
 
-<!-- region: 05 type=text -->
-A brief narrative sentence helps verify selective rendering around ordinary prose content.
+## Request path
 
-<!-- region: 06 type=text -->
-Another prose block makes the fixture feel like a real presentation rather than a synthetic placeholder.
+Traffic moves through the gateway, API, queue, and worker.
 
-<!-- region: 07 type=text -->
-The next region highlights repeated words, emphasis tokens, and common markdown punctuation.
+## Capacity
 
-<!-- region: 08 type=text -->
-This paragraph includes a quoted phrase to ensure text normalization remains stable under varied input.
+Peak load remains below the tested service envelope.
 
-<!-- region: 09 type=text -->
-A line break and a follow-up sentence create additional complexity without making the benchmark noisy.
+## Reliability
 
-<!-- region: 10 type=text -->
-The tenth region is still plain text but carries enough length to influence layout spacing decisions.
+The error budget remains healthy across all production regions.
 
-<!-- region: 11 type=text -->
-A modest paragraph continues the progression and keeps the benchmark dense enough for repeatability.
+## Deployment
 
-<!-- region: 12 type=text -->
-This region adds a practical example that feels conversational rather than mechanical.
+The deployment uses staged cohorts with automated health checks.
 
-<!-- region: 13 type=text -->
-A compact paragraph demonstrates that short blocks also contribute useful parse work.
+## Observability
 
-<!-- region: 14 type=text -->
-The fourteenth region includes a parenthetical aside to further diversify token boundaries.
+Dashboards cover latency, throughput, failures, and saturation.
 
-<!-- region: 15 type=text -->
-A mid-fixture paragraph introduces a subtle shift in topic while remaining easy to read.
+## Security
 
-<!-- region: 16 type=text -->
-This region carries a more declarative style and provides additional line-level variation.
+Authentication and authorization run before request processing.
 
-<!-- region: 17 type=text -->
-The seventeenth region balances detail and brevity so the benchmark stays focused.
+## Data flow
 
-<!-- region: 18 type=text -->
-Another prose block helps stress text aggregation without introducing excessive complexity.
-
-<!-- region: 19 type=text -->
-The nineteenth region is deliberately plain to keep the fixture canonical and deterministic.
-
-<!-- region: 20 type=text -->
-The final text region closes the prose portion before the fixture moves into code and media blocks.
-
-<!-- region: 21 type=code -->
-```js
-const title = 'silmaril benchmark';
-console.log(title);
+```mermaid
+flowchart LR
+  Client --> Gateway
+  Gateway --> API
+  API --> Queue
+  Queue --> Worker
 ```
 
-<!-- region: 22 type=code -->
+## API contract
+
 ```ts
-function greet(name: string) {
-  return `hello ${name}`;
-}
+type Result = {
+  id: string;
+  status: "ready" | "pending";
+};
 ```
 
-<!-- region: 23 type=code -->
-```json
-{ "theme": "cards", "mode": "bench" }
-```
+## Dependencies
 
-<!-- region: 24 type=code -->
-```bash
-echo "rendering benchmark"
-```
+All production dependencies have explicit owners and health signals.
 
-<!-- region: 25 type=code -->
-```python
-value = 42
-print(value)
-```
+## Failure handling
 
-<!-- region: 26 type=code -->
-```css
-.card { display: grid; gap: 1rem; }
-```
+Retries are bounded and dead-lettered work remains inspectable.
 
-<!-- region: 27 type=code -->
-```html
-<div class="card">Silmaril</div>
-```
+## Rollback
 
-<!-- region: 28 type=code -->
-```yaml
-steps:
-  - parse
-  - layout
-```
+The previous build remains available throughout the rollout.
 
-<!-- region: 29 type=code -->
-```sql
-SELECT name FROM regions WHERE count > 1;
-```
+## Testing
 
-<!-- region: 30 type=code -->
-```jsx
-export const note = <span>bench</span>;
-```
+Unit, integration, and browser coverage exercise the release path.
 
-<!-- region: 31 type=image -->
-![atlas](https://example.com/atlas.png)
+## Performance
 
-<!-- region: 32 type=image -->
-![diagram](https://example.com/diagram.png)
+Build output remains deterministic across repeated runs.
 
-<!-- region: 33 type=image -->
-![overview](https://example.com/overview.png)
+## Accessibility
 
-<!-- region: 34 type=image -->
-![timeline](https://example.com/timeline.png)
+Text and emphasis maintain readable contrast in both display modes.
 
-<!-- region: 35 type=image -->
-![gallery](https://example.com/gallery.png)
+## Operations
 
-<!-- region: 36 type=image -->
-![map](https://example.com/map.png)
+Runbooks cover deployment, rollback, and incident diagnosis.
 
-<!-- region: 37 type=image -->
-![scene](https://example.com/scene.png)
+## Ownership
 
-<!-- region: 38 type=image -->
-![chart](https://example.com/chart.png)
+Each service and alert has a named engineering owner.
 
-<!-- region: 39 type=image -->
-![panel](https://example.com/panel.png)
+## Decision
 
-<!-- region: 40 type=image -->
-![hero](https://example.com/hero.png)
+Proceed with the next cohort after the final health review.
 
-<!-- region: 41 type=group parent=1 -->
-- Group alpha
-  - Child alpha
-  - Child beta
+## Next step
 
-<!-- region: 42 type=group parent=2 -->
-- Group beta
-  - Child gamma
-  - Child delta
-
-<!-- region: 43 type=group parent=3 -->
-> Nested quote for the benchmark
-> More nested detail for layout and assembly
-
-<!-- region: 44 type=group parent=4 -->
-1. Group one
-   1. Child one
-   2. Child two
-
-<!-- region: 45 type=group parent=5 -->
-- Group two
-  - Child three
-    - Child four
-
-<!-- region: 46 type=group parent=6 -->
-- Group three
-  - Child five
-  - Child six
-
-<!-- region: 47 type=group parent=7 -->
-> Deeply nested quote
-> Another nested line
-
-<!-- region: 48 type=group parent=8 -->
-- Group four
-  - Child seven
-  - Child eight
-
-<!-- region: 49 type=group parent=9 -->
-1. Group five
-   1. Child nine
-   2. Child ten
-
-<!-- region: 50 type=group parent=10 -->
-- Group six
-  - Child eleven
-  - Child twelve
+Record the rollout result and update the service baseline.

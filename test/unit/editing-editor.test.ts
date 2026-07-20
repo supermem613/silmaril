@@ -4,12 +4,11 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import test from "node:test";
-import { assemble, type Region } from "../../src/pipeline/assemble.js";
 import { inlineMarkdown } from "../../src/pipeline/inline.js";
-import { parseHeadingBoard } from "../../src/pipeline/parse.js";
-import { renderRegion } from "../../src/pipeline/render.js";
-import { engineeringTokensCss } from "../../src/theme/engineering/tokens.css.js";
-import { getTheme } from "../../src/theme/registry.js";
+import { parseBoard } from "../../src/pipeline/parse.js";
+import { renderMarkdown } from "../../src/pipeline/render.js";
+import { buildPresentation, type PresentationSlide } from "../../src/presentation/index.js";
+import { engineeringTokensCss } from "../../src/presentation/tokens.css.js";
 
 function parseHexColor(value: string): [number, number, number] {
   const normalized = value.trim().replace(/^#/, "").toLowerCase();
@@ -52,23 +51,21 @@ test("embeds a slide-local Markdown editor with live slide rendering, runtime pe
     "Use **strong** emphasis and the slide-local editor.",
   ].join("\n");
 
-  const board = parseHeadingBoard(source);
-  const theme = getTheme("engineering");
-  assert.equal(theme.backgroundColor, "#000000", "expected the dark engineering canvas to use true black");
+  const board = parseBoard(source);
   assert.match(engineeringTokensCss, /--dark-bg:\s*#000000/i, "expected the dark canvas token to use true black");
   assert.match(
     engineeringTokensCss,
     /html,\s*body\.engineering-theme\s*\{[\s\S]*?background:\s*var\(--dark-bg\)/i,
     "expected the general dark board area to use the dark canvas token",
   );
-  const regions: Array<Region & { markdownSource: string }> = board.slides.map((slide) => ({
+  const slides: PresentationSlide[] = board.slides.map((slide) => ({
     id: slide.id,
     title: slide.title,
-    content: renderRegion(inlineMarkdown(slide.body, fileURLToPath(new URL("../../", import.meta.url))).markdown),
+    content: renderMarkdown(inlineMarkdown(slide.body, fileURLToPath(new URL("../../", import.meta.url))).markdown),
     markdownSource: slide.body,
   }));
 
-  const html = assemble(theme, regions, { documentTitle: board.title, version: "test" });
+  const html = buildPresentation(slides, { documentTitle: board.title, version: "test" });
   const markdownItBundle = readFileSync(new URL("../../node_modules/markdown-it/dist/markdown-it.min.js", import.meta.url), "utf8");
   const sourcePayloadMatch = html.match(/<script type="application\/json" id="silmaril-source">([\s\S]*?)<\/script>/i);
   assert.ok(sourcePayloadMatch, "expected the engineering artifact to include the silmaril-source payload for the slide-local editor runtime");
@@ -189,15 +186,15 @@ test("embeds a slide-local Markdown editor with live slide rendering, runtime pe
 });
 
 test("wraps the engineering board after five slides and centers the final row", () => {
-  const theme = getTheme("engineering");
-  const regions: Region[] = Array.from({ length: 7 }, (_, index) => ({
+  const slides: PresentationSlide[] = Array.from({ length: 7 }, (_, index) => ({
     id: `slide-${index + 1}`,
     title: `Slide ${index + 1}`,
     content: `<p>Slide ${index + 1}</p>`,
+    markdownSource: `Slide ${index + 1}`,
   }));
-
-  assert.ok(theme.layout, "expected the engineering theme to provide a board layout");
-  const placements = theme.layout(regions, { theme });
+  const html = buildPresentation(slides, { documentTitle: "Layout" });
+  const placements = [...html.matchAll(/data-x="([^"]+)" data-y="([^"]+)" data-z="0" data-id="slide-\d+"/g)]
+    .map((match) => ({ x: Number(match[1]), y: Number(match[2]) }));
   assert.deepEqual(
     placements.map(({ x, y }) => ({ x, y })),
     [
@@ -214,21 +211,20 @@ test("wraps the engineering board after five slides and centers the final row", 
 });
 
 test("reserves viewport gutters around focused engineering slides", () => {
-  const theme = getTheme("engineering");
-  assert.equal(theme.impressAttributes?.width, 1120);
-  assert.equal(theme.impressAttributes?.height, 820);
+  const html = buildPresentation([], { documentTitle: "Gutters" });
+  assert.match(html, /id="impress" data-width="1120" data-height="820"/);
 });
 
 test("resolves the Markdown renderer from a hoisted dependency in a packed install layout", async () => {
   const fixtureRoot = mkdtempSync(join(tmpdir(), "silmaril-packed-editor-"));
   const installedRoot = join(fixtureRoot, "node_modules", "silmaril");
-  const editorPath = join(installedRoot, "dist", "theme", "engineering", "editor.ts");
+  const editorPath = join(installedRoot, "dist", "presentation", "editor.ts");
   const hoistedMarkdownItPath = join(fixtureRoot, "node_modules", "markdown-it");
 
   try {
     mkdirSync(dirname(editorPath), { recursive: true });
     writeFileSync(join(installedRoot, "package.json"), JSON.stringify({ type: "module" }));
-    writeFileSync(editorPath, readFileSync(new URL("../../src/theme/engineering/editor.ts", import.meta.url), "utf8"));
+    writeFileSync(editorPath, readFileSync(new URL("../../src/presentation/editor.ts", import.meta.url), "utf8"));
     cpSync(new URL("../../node_modules/markdown-it", import.meta.url), hoistedMarkdownItPath, { recursive: true });
 
     const installedEditor = await import(pathToFileURL(editorPath).href);

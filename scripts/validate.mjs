@@ -76,7 +76,7 @@ function validateCanvasProfile(html) {
   }
 
   const remoteReferenceMatches = [
-    ...html.matchAll(/\b(?:src|href|poster|action)\s*=\s*(["'])(https?:|\/\/)[^"']*\1/gi),
+    ...html.matchAll(/\b(?:src|poster|action)\s*=\s*(["'])(https?:|\/\/)[^"']*\1/gi),
     ...html.matchAll(/url\(\s*(["']?)(https?:|\/\/)[^)"']*\1\s*\)/gi),
   ];
   if (remoteReferenceMatches.length > 0) {

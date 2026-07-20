@@ -1,25 +1,21 @@
----
-title: Silmaril tour
-theme: cards
-canvas:
-  width: 1600
-  height: 900
----
+# Silmaril tour
 
-- Overview
-  Start with a single glance at the story. Silmaril turns a compact scene into a zoomable presentation.
+## Write headings
 
-- Detail
-  - group:
-    - id: proof
-  Keep the supporting evidence together in one cluster while the canvas carries the narrative from overview to detail.
+Use one `#` title and a `##` heading for each slide.
 
-- Code
-  Use the same source to render each theme:
+## Build one file
 
-  ```sh
-  node dist/cli.js build examples/silmaril-tour.md --out examples/cards.html --theme cards
-  ```
+```sh
+node dist/cli.js build examples/silmaril-tour.md --out silmaril-tour.html
+```
 
-- Close
-  Open the generated file and step through the presentation with the same narrative in every theme.
+The output contains its styles, scripts, diagrams, and local images.
+
+## Present the board
+
+Open on the full board, then use the arrow keys to focus each slide.
+
+## Edit in place
+
+Use the Markdown drawer for a live preview, then export the updated Markdown.

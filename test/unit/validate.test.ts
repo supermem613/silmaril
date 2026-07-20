@@ -31,7 +31,7 @@ function runValidator(fixturePath: string, extraArgs: string[] = []) {
 
 describe("canvas validator", () => {
   it("validates the canvas profile and exit contract", () => {
-    const goldenPath = fileURLToPath(new URL("../golden/plain.html", import.meta.url));
+    const goldenPath = fileURLToPath(new URL("../fixtures/validate/good.html", import.meta.url));
     const golden = runValidator(goldenPath, ["--profile", "canvas", "--json"]);
     assert.equal(golden.status, 0, `expected golden fixture to pass, received ${golden.payload.diagnostic} (${golden.payload.code})`);
     assert.equal(golden.payload.code, 0, `expected golden fixture to return code 0, received ${golden.payload.code}`);

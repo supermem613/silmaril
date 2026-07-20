@@ -1,16 +1,13 @@
----
-title: Quick sketch
-theme: sketch
-canvas:
-  width: 1600
-  height: 900
----
+# Quick presentation
 
-- Start with the overview
-  Open the story with a single glance at the whole scene.
+## Start with the point
 
-- Zoom into the detail
-  Add a focused card that explains the key idea.
+State the engineering decision or result immediately.
 
-- Close with an action
-  End with a short next step so the audience knows where to go.
+## Show the evidence
+
+Use a short list, table, code sample, image, or Mermaid diagram.
+
+## End with the action
+
+Name the owner and the next concrete step.

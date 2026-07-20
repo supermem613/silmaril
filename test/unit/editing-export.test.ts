@@ -2,11 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { runInNewContext } from "node:vm";
-import { assemble, type Region } from "../../src/pipeline/assemble.js";
 import { inlineMarkdown } from "../../src/pipeline/inline.js";
-import { parseHeadingBoard } from "../../src/pipeline/parse.js";
-import { renderRegion } from "../../src/pipeline/render.js";
-import { getTheme } from "../../src/theme/registry.js";
+import { parseBoard } from "../../src/pipeline/parse.js";
+import { renderMarkdown } from "../../src/pipeline/render.js";
+import { buildPresentation, type PresentationSlide } from "../../src/presentation/index.js";
 
 test("exports the edited deck as Markdown from the source model via File System Access with download fallback", async () => {
   const source = [
@@ -19,16 +18,15 @@ test("exports the edited deck as Markdown from the source model via File System 
     "## Empty",
   ].join("\n");
 
-  const board = parseHeadingBoard(source);
-  const theme = getTheme("engineering");
-  const regions: Array<Region & { markdownSource: string }> = board.slides.map((slide) => ({
+  const board = parseBoard(source);
+  const slides: PresentationSlide[] = board.slides.map((slide) => ({
     id: slide.id,
     title: slide.title,
-    content: renderRegion(inlineMarkdown(slide.body, fileURLToPath(new URL("../../", import.meta.url))).markdown),
+    content: renderMarkdown(inlineMarkdown(slide.body, fileURLToPath(new URL("../../", import.meta.url))).markdown),
     markdownSource: slide.body,
   }));
 
-  const html = assemble(theme, regions, { documentTitle: board.title, version: "test" });
+  const html = buildPresentation(slides, { documentTitle: board.title, version: "test" });
   const sourcePayloadMatch = html.match(/<script type="application\/json" id="silmaril-source">([\s\S]*?)<\/script>/i);
   assert.ok(sourcePayloadMatch, "expected the engineering artifact to include the silmaril-source payload for export runtime state");
   const payload = JSON.parse(sourcePayloadMatch[1]) as { title: string; slides: Array<{ id: string; title: string; markdown: string }> };

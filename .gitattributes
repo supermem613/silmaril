@@ -3,8 +3,4 @@
 *.ts text eol=lf
 *.json text eol=lf
 *.md text eol=lf
-*.woff2 binary
-*.base64.txt text eol=lf
 test/golden/*.html text eol=lf
-examples/*.html text eol=lf
-fixtures/prototypes/** -text

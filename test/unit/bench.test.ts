@@ -1,50 +1,36 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import test from "node:test";
 
-const testDir = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(testDir, '..', '..');
-const fixturePath = path.join(repoRoot, 'fixtures', 'perf', 'big-talk.md');
-const benchScript = path.join(repoRoot, 'scripts', 'bench.mjs');
-const cliScript = path.join(repoRoot, 'dist', 'cli.js');
+const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const fixturePath = path.join(repositoryRoot, "fixtures", "perf", "big-talk.md");
 
-test('bench.mjs reports the byte length of built HTML', () => {
-  const benchResult = spawnSync(process.execPath, [benchScript, fixturePath, '--theme', 'cards', '--json'], {
-    cwd: repoRoot,
-    encoding: 'utf8',
+test("bench reports the byte length of the real build pipeline", () => {
+  const benchmark = spawnSync(process.execPath, [path.join(repositoryRoot, "scripts", "bench.mjs"), fixturePath, "--json"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
   });
+  assert.equal(benchmark.status, 0, benchmark.stderr || benchmark.stdout);
 
-  assert.equal(benchResult.status, 0, benchResult.stderr || benchResult.stdout);
-
-  const metrics = JSON.parse(benchResult.stdout);
-
-  const tempDir = mkdtempSync(path.join(os.tmpdir(), 'silmaril-bench-'));
-  const outputPath = path.join(tempDir, 'big-talk.html');
+  const directory = mkdtempSync(path.join(os.tmpdir(), "silmaril-bench-"));
+  const outputPath = path.join(directory, "big-talk.html");
   try {
-    const buildResult = spawnSync(process.execPath, [cliScript, 'build', fixturePath, '--theme', 'cards', '--out', outputPath], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-    });
-
-    assert.equal(buildResult.status, 0, buildResult.stderr || buildResult.stdout);
-
-    const buildPayload = JSON.parse(buildResult.stdout);
-    assert.equal(buildPayload.ok, true);
-
-    const builtHtml = readFileSync(outputPath, 'utf8');
-    assert.equal(
-      metrics.outBytes,
-      Buffer.byteLength(builtHtml, 'utf8'),
-      'scripts/bench.mjs does not measure the real pipeline, so totalMs is null/non-numeric or outBytes reflects source rather than built HTML',
+    const build = spawnSync(
+      process.execPath,
+      [path.join(repositoryRoot, "dist", "cli.js"), "build", fixturePath, "--out", outputPath],
+      { cwd: repositoryRoot, encoding: "utf8" },
     );
-    assert.equal(typeof metrics.totalMs, 'number');
+    assert.equal(build.status, 0, build.stderr || build.stdout);
+
+    const metrics = JSON.parse(benchmark.stdout) as { totalMs: number; outBytes: number };
+    assert.equal(metrics.outBytes, Buffer.byteLength(readFileSync(outputPath, "utf8"), "utf8"));
     assert.ok(Number.isFinite(metrics.totalMs));
     assert.ok(metrics.totalMs > 0);
   } finally {
-    rmSync(tempDir, { recursive: true, force: true });
+    rmSync(directory, { recursive: true, force: true });
   }
 });

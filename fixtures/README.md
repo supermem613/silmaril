@@ -1,3 +1,3 @@
-# Fixture index
+# Fixtures
 
-The canonical performance fixture lives at `perf/big-talk.md` and contains exactly 50 annotated regions for benchmarking parse, layout, render, and assembly stages.
+`perf/big-talk.md` is the representative heading-based presentation used by the build benchmark.

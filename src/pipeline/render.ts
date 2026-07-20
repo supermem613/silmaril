@@ -89,6 +89,6 @@ function renderCodeBlock(content: string, language: string): string {
   }
 }
 
-export function renderRegion(markdown: string): string {
+export function renderMarkdown(markdown: string): string {
   return createMarkdownRenderer().render(markdown);
 }

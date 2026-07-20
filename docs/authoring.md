@@ -1,153 +1,54 @@
-# Silmaril authoring guide
+# Authoring presentations
 
-Silmaril accepts a single markdown scene file and turns it into a deterministic single-file HTML canvas. The public entry point is `build`. The engineering theme uses heading-defined slides, while the legacy themes use the bullet-based region grammar.
+Silmaril turns ordinary headings into slides.
 
-## 1. Frontmatter
-
-Start the file with a YAML-like frontmatter block delimited by `---` on the first and last lines:
-
-```md
----
-title: Quick sketch
-theme: sketch
-canvas:
-  width: 1600
-  height: 900
----
-```
-
-Supported frontmatter keys:
-
-- `title`: string, used as the generated HTML document title.
-- `theme`: `engineering`, `cards`, `atlas`, or `sketch`. The CLI uses this value unless `--theme` overrides it.
-- `canvas.width` and `canvas.height`: positive numbers for the scene canvas dimensions.
-
-The parser accepts simple scalars (`true`, `false`, `null`, strings, numbers) and nested objects. Arrays are not part of the current grammar.
-
-## 2. Region grammar
-
-For the `engineering` theme, use one `#` heading for the board title and one `##` heading for each ordered slide. If the `#` heading is omitted, Silmaril uses the Markdown filename without its extension as the board title:
-
-````md
-# Service readiness
+````markdown
+# Architecture review
 
 ## Request path
 
+1. The gateway authenticates the caller.
+2. The API validates the request.
+3. The worker persists the result.
+
+## Failure handling
+
 ```mermaid
 flowchart LR
-  Client[Client] --> API[API]
-  API --> Store[Store]
+  Request --> API
+  API --> Queue
+  Queue --> Worker
 ```
-
-## Rollout
-
-Ship behind a feature flag, then expand by measured stages.
 ````
 
-Mermaid flowchart fences are compiled at build time into deterministic inline SVG. Diagram colors use the engineering theme tokens, so dark and light mode switch together. The generated HTML contains no Mermaid runtime library and no remote or CDN diagram reference.
+## Structure
 
-For `cards`, `atlas`, and `sketch`, write one region per top-level bullet list item. The region title is the text of the bullet. Indented lines that follow belong to the region body.
+- Use one optional `#` heading for the presentation title.
+- Use a `##` heading for every slide.
+- Put the slide body below its heading.
+- Repeated slide titles receive stable numbered identifiers in source order.
+- Headings inside fenced code blocks remain code.
 
-```md
-- Overview
-  Start with the whole story in one glance.
+When the `#` heading is omitted, the Markdown filename becomes the title.
 
-- Detail
-  Zoom in for supporting evidence.
+## Slide content
+
+Slide bodies support paragraphs, lists, tables, emphasis, local images, syntax-highlighted code, and Mermaid diagrams. Raw HTML is escaped. Local images are embedded in the HTML output. Remote links and remote images are rejected so the presentation remains self-contained.
+
+## Build
+
+```sh
+node dist/cli.js build talk.md
+node dist/cli.js build talk.md --out talk.html
+node dist/cli.js build talk.md --open
 ```
 
-The parser treats the body as markdown content and preserves region order. Use an explicit `@silmaril` block for placement metadata:
+Without `--out`, Silmaril writes `<source-name>.html` to the system temp directory.
 
-```md
-- Detail
-  - @silmaril:
-    - x: 1700
-    - y: -150
-    - scale: 1
-    - rotate: 6
-  ## Slides are a line. Ideas are a place.
+## Present and edit
 
-  Keep **spatial context** while you present.
-```
+The presentation starts on the whole-board overview. Arrow keys move through slides. Focused-slide mode isolates the active slide and shows quiet edge cues when another slide exists in that direction.
 
-Ordinary bullets containing colons remain presentation content. Legacy `x`, `y`, `scale`, `rotate`, and `group` bullets are still accepted for compatibility.
+Open the Markdown editor from the right-edge control drawer. Editing updates the focused slide as a live preview, and the live preview matches the rendered slide. The browser state is temporary; the Markdown file remains the source of truth.
 
-## 3. Grouping and layout
-
-Use a nested group inside `@silmaril` to keep regions together:
-
-```md
-- Overview
-  Open the scene with a map-like overview.
-
-- Detail
-  - @silmaril:
-    - group:
-      - id: evidence
-  Add a focused detail card.
-```
-
-The current public build path uses deterministic auto-layout:
-
-- an empty whole-board overview is the first camera target;
-- the overview center is derived from the minimum and maximum region coordinates;
-- every unpositioned region receives a distinct deterministic placement;
-- grouped regions retain their authored order.
-
-Manual `x`, `y`, `scale`, and `rotate` values flow through the public `build` command. Sparse placement is supported: author only the fields you want to override and the theme keeps its values for the rest.
-
-## 4. Markdown body rules
-
-Region bodies are rendered as markdown. Silmaril sanitizes HTML and disables remote links and images. Local images are inlined into the final file, so the single HTML output stays self-hosted.
-
-This means:
-
-- raw HTML is escaped rather than emitted;
-- remote image and link references are rejected;
-- local assets are embedded as data URIs.
-
-## 5. Editing and export
-
-Generated engineering Silmarils remain single-file `file://` artifacts. The embedded Markdown is the durable source of truth.
-
-On a focused slide, use **Edit** to open its Markdown textarea and accurate bundled live preview. Changes update the in-memory artifact model only; they do not modify the original Markdown file. The preview renders from that Markdown model rather than reconstructing source from the slide DOM.
-
-Use **Export Markdown** to save the current title and every slide in order, including edits and empty slide bodies. Silmaril uses the File System Access API when the browser provides it and a browser download fallback otherwise.
-
-The whole-board overview shows `silmaril · <version>` in the bottom-right corner. The product name links to the Silmaril repository in a new tab, and both the repository URL and version come from package/build metadata rather than theme constants. Engineering `**bold**` text uses separate dark and light amber tokens that meet WCAG AA contrast, and the live preview matches the rendered slide.
-
-## 6. Themes
-
-The `build` command accepts four themes through frontmatter or `--theme`:
-
-- `engineering`: minimalist dark-first slides with a persistent light-mode toggle and build-time inline Mermaid flowcharts.
-- `cards`: dark presentation cards with authored semantic emphasis.
-- `atlas`: parchment location cards on a neutral canvas.
-- `sketch`: hand-drawn cards on a neutral canvas.
-
-All four themes open on the content-free whole-board overview, keep every region at a distinct location, and use the authored title for the browser tab. The repository showcase sources are exact accepted prototypes and retain their richer fixed scenery and routes.
-
-The repository showcase sources demonstrate the richer conventions for each accepted presentation:
-
-- [cards-tour.md](../examples/cards-tour.md)
-- [atlas-tour.md](../examples/atlas-tour.md)
-- [sketch-tour.md](../examples/sketch-tour.md)
-
-If neither frontmatter nor `--theme` selects a theme, Silmaril uses `engineering` and reads the `#` document title plus `##` slides. Without a `#` heading, the Markdown filename becomes the document title. An explicit `--theme` always wins over frontmatter.
-
-## 7. Determinism and self-hosting
-
-Silmaril aims for deterministic output. The parser preserves region order, the layout engine uses stable placement rules, and the themes render from fixed assets. That makes it practical to compare two builds of the same markdown and expect the same HTML structure.
-
-Self-hosting is part of the authoring contract: the build output is a single HTML file, local assets are inlined, and remote asset references are rejected. There is no separate ownership-validation command in the current public CLI; the authoring contract is enforced by the parser and renderer instead.
-
-## 8. CLI entry points
-
-Use the CLI to validate and build your scene:
-
-- `doctor` checks the local environment.
-- `schema` prints the public command catalog.
-- `build` writes the HTML presentation. Without `--out`, the file is named after the markdown source and written to the operating system temp directory.
-- `update` self-updates the checkout.
-
-The CLI supports global `--help` and `--version` flags. The `build` command adds `--emit-scene` for inspecting the parsed scene IR.
+Use **Export Markdown** to save edits. The native path uses the File System Access API, with a download fallback when it is unavailable. The board signature is `silmaril · <version>`. Strong emphasis uses an amber color with WCAG AA contrast in both display modes.

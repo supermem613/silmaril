@@ -13,8 +13,6 @@ const launch = 'engineering';
 | Build | Green |
 | Release | Yellow |
 
-![Architecture diagram](./architecture.svg)
-
 ## Delivery Focus
 
 The team is preparing the next milestone with clear ownership and measurable rollout steps.

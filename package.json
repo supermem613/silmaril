@@ -1,7 +1,7 @@
 {
   "name": "silmaril",
   "version": "0.4.0",
-  "description": "Compile annotated Markdown into a deterministic single-file zoomable-canvas HTML presentation",
+  "description": "A trivial, no-frills Markdown-to-slides pipeline for engineers",
   "repository": {
     "type": "git",
     "url": "https://github.com/supermem613/silmaril"
@@ -37,7 +37,6 @@
     "commander": "13.1.0",
     "highlight.js": "11.11.1",
     "markdown-it": "14.3.0",
-    "roughjs": "4.6.6",
     "zod": "3.25.76"
   },
   "devDependencies": {

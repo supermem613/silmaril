@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from 'node:url';
 
 const markdownItBundlePath = fileURLToPath(import.meta.resolve('markdown-it/dist/markdown-it.min.js'));

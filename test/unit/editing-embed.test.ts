@@ -2,11 +2,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { assemble, type Region } from "../../src/pipeline/assemble.js";
 import { inlineMarkdown } from "../../src/pipeline/inline.js";
-import { parseHeadingBoard } from "../../src/pipeline/parse.js";
-import { renderRegion } from "../../src/pipeline/render.js";
-import { getTheme } from "../../src/theme/registry.js";
+import { parseBoard } from "../../src/pipeline/parse.js";
+import { renderMarkdown } from "../../src/pipeline/render.js";
+import { buildPresentation, type PresentationSlide } from "../../src/presentation/index.js";
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -26,7 +25,7 @@ test("embeds per-slide raw Markdown source and a package-version overview signat
     "## Empty Slide",
   ].join("\n");
 
-  const board = parseHeadingBoard(source);
+  const board = parseBoard(source);
   assert.equal(board.title, "Engineering Board");
   assert.equal(board.slides.length, 2);
   assert.equal(board.slides[0].title, "Application Design");
@@ -47,20 +46,19 @@ test("embeds per-slide raw Markdown source and a package-version overview signat
 
   const packageManifest = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as { version: string };
   const repositoryUrl = "https://github.com/supermem613/silmaril";
-  const theme = getTheme("engineering");
-  const regions: Array<Region & { markdownSource: string }> = board.slides.map((slide) => ({
+  const slides: PresentationSlide[] = board.slides.map((slide) => ({
     id: slide.id,
     title: slide.title,
-    content: renderRegion(inlineMarkdown(slide.body, fileURLToPath(new URL("../../", import.meta.url))).markdown),
+    content: renderMarkdown(inlineMarkdown(slide.body, fileURLToPath(new URL("../../", import.meta.url))).markdown),
     markdownSource: slide.body,
   }));
 
-  const assembleOptions = {
+  const presentationOptions = {
     documentTitle: board.title,
     version: packageManifest.version,
     repositoryUrl,
   };
-  const html = assemble(theme, regions, assembleOptions);
+  const html = buildPresentation(slides, presentationOptions);
   const scriptMatch = html.match(/<script type="application\/json" id="silmaril-source">([\s\S]*?)<\/script>/i);
   assert.ok(scriptMatch, "expected an embedded silmaril-source payload with per-slide raw Markdown and a bottom-right silmaril · <version> overview signature sourced from the package version");
 
