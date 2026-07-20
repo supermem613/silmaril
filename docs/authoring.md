@@ -106,7 +106,17 @@ This means:
 - remote image and link references are rejected;
 - local assets are embedded as data URIs.
 
-## 5. Themes
+## 5. Editing and export
+
+Generated engineering Silmarils remain single-file `file://` artifacts. The embedded Markdown is the durable source of truth.
+
+On a focused slide, use **Edit** to open its Markdown textarea and accurate bundled live preview. Changes update the in-memory artifact model only; they do not modify the original Markdown file. The preview renders from that Markdown model rather than reconstructing source from the slide DOM.
+
+Use **Export Markdown** to save the current title and every slide in order, including edits and empty slide bodies. Silmaril uses the File System Access API when the browser provides it and a browser download fallback otherwise.
+
+The whole-board overview shows `silmaril · <version>` in the bottom-right corner. The version comes from package/build metadata rather than a theme constant. Engineering `**bold**` text uses separate dark and light amber tokens that meet WCAG AA contrast, and the live preview matches the rendered slide.
+
+## 6. Themes
 
 The `build` command accepts four themes through frontmatter or `--theme`:
 
@@ -125,13 +135,13 @@ The repository showcase sources demonstrate the richer conventions for each acce
 
 If neither frontmatter nor `--theme` selects a theme, Silmaril uses `engineering` and reads the `#` document title plus `##` slides. Without a `#` heading, the Markdown filename becomes the document title. An explicit `--theme` always wins over frontmatter.
 
-## 6. Determinism and self-hosting
+## 7. Determinism and self-hosting
 
 Silmaril aims for deterministic output. The parser preserves region order, the layout engine uses stable placement rules, and the themes render from fixed assets. That makes it practical to compare two builds of the same markdown and expect the same HTML structure.
 
 Self-hosting is part of the authoring contract: the build output is a single HTML file, local assets are inlined, and remote asset references are rejected. There is no separate ownership-validation command in the current public CLI; the authoring contract is enforced by the parser and renderer instead.
 
-## 7. CLI entry points
+## 8. CLI entry points
 
 Use the CLI to validate and build your scene:
 

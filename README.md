@@ -9,6 +9,14 @@ Silmaril compiles annotated Markdown into a deterministic single-file HTML canva
 - `build` writes a presentation and accepts `--out`, `--theme`, `--emit-scene`, and `--open`. Without `--out`, it writes `<source-name>.html` in the system temp directory.
 - `update` self-updates the checkout.
 
+## Edit and export
+
+Generated engineering Silmarils remain single-file `file://` artifacts. Their embedded Markdown is the durable source of truth.
+
+On a focused slide, use **Edit** to open a Markdown textarea and accurate bundled live preview. Edits update the in-memory artifact only; they do not overwrite the original Markdown file. Use **Export Markdown** to save the title and every current slide in order. Supported browsers use the File System Access API, with a browser download fallback when that API is unavailable.
+
+The whole-board overview shows `silmaril · <version>` in the bottom-right corner, using the version from package/build metadata. Engineering `**bold**` text uses separate dark and light amber tokens that meet WCAG AA contrast, and the live preview matches the rendered slide.
+
 ## Learn more
 
 - Authoring guide: [docs/authoring.md](docs/authoring.md)

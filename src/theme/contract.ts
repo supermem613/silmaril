@@ -9,6 +9,7 @@ export interface ThemeRegionDescriptor extends ThemePlacementPatch {
   readonly id: string;
   readonly title: string;
   readonly content: string;
+  readonly markdownSource?: string;
 }
 
 export interface ThemeLayoutPlacement extends ThemePlacementPatch {
@@ -40,9 +41,20 @@ export interface ThemeOverview {
   readonly className?: string;
 }
 
+export interface ThemeSourcePayload {
+  readonly title: string;
+  readonly slides: readonly {
+    readonly id: string;
+    readonly title: string;
+    readonly markdown: string;
+  }[];
+}
+
 export interface ThemeSceneryContext {
   readonly theme: Theme;
   readonly documentTitle: string;
+  readonly version?: string;
+  readonly sourcePayload?: ThemeSourcePayload;
 }
 
 export type ThemeOverviewContext = ThemeSceneryContext;

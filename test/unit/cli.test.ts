@@ -9,6 +9,7 @@ import { requestOpenOutput } from "../../src/commands/build.js";
 
 const repoRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const cliPath = join(repoRoot, "dist", "cli.js");
+const packageVersion = (JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as { version: string }).version;
 
 function runCli(args: string[], cwd = repoRoot) {
   return spawnSync(process.execPath, [cliPath, ...args], {
@@ -76,7 +77,7 @@ describe("cli contract", () => {
     assert.equal(schemaPayload.ok, true);
     assert.equal(schemaPayload.command, "schema");
     assert.equal(schemaPayload.data.schemaVersion, 1);
-    assert.equal(schemaPayload.data.cliVersion, "0.3.0");
+    assert.equal(schemaPayload.data.cliVersion, packageVersion);
     assert.equal(schemaPayload.data.envelope.stdout, "JSON only for non-interactive commands when --json or schema is used");
     assert.deepEqual(schemaPayload.data.envelope.successEnvelope, ["ok", "command", "data", "warnings"]);
     assert.deepEqual(schemaPayload.data.envelope.errorEnvelope, ["ok", "command", "error", "hint"]);

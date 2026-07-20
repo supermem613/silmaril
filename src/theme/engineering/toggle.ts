@@ -89,6 +89,11 @@ export const engineeringNavigationScript = `
           });
         };
         var pendingOverviewKey = null;
+        var preserveBrowserRefresh = function (event) {
+          if (event.key === 'F5' || event.code === 'F5') {
+            event.stopImmediatePropagation();
+          }
+        };
         var handleNavigation = function (event) {
           if (event.key === 'Tab' || event.key === 'End') {
             event.preventDefault();
@@ -137,6 +142,7 @@ export const engineeringNavigationScript = `
         });
         document.addEventListener('click', openBoardStep);
         document.addEventListener('keydown', openBoardStep);
+        window.addEventListener('keydown', preserveBrowserRefresh, true);
         window.addEventListener('keydown', handleNavigation, true);
         window.addEventListener('keyup', handleNavigation, true);
       };

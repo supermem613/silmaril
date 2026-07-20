@@ -8,6 +8,7 @@ export interface Region {
   readonly id: string;
   readonly title: string;
   readonly content: string;
+  readonly markdownSource?: string;
   readonly x?: number;
   readonly y?: number;
   readonly scale?: number;
@@ -16,6 +17,7 @@ export interface Region {
 
 export interface AssembleOptions {
   readonly documentTitle?: string;
+  readonly version?: string;
 }
 
 const CAMERA_OVERVIEW_STYLE = 'width:0;padding:0;background:transparent;border:0;border-radius:0;box-shadow:none;opacity:0;pointer-events:none';
@@ -29,10 +31,36 @@ function toThemeRegion(region: Region): ThemeRegionDescriptor {
     id: region.id,
     title: region.title,
     content: region.content,
+    markdownSource: region.markdownSource,
     x: region.x,
     y: region.y,
     scale: region.scale,
     rotate: region.rotate,
+  };
+}
+
+function buildSourcePayload(documentTitle: string, regions: readonly ThemeRegionDescriptor[]) {
+  const slides = regions
+    .map((region) => {
+      if (typeof region.markdownSource === 'undefined') {
+        return null;
+      }
+
+      return {
+        id: region.id,
+        title: region.title,
+        markdown: region.markdownSource,
+      };
+    })
+    .filter((slide): slide is { id: string; title: string; markdown: string } => slide !== null);
+
+  if (slides.length === 0) {
+    return undefined;
+  }
+
+  return {
+    title: documentTitle,
+    slides,
   };
 }
 
@@ -171,6 +199,7 @@ function createAutoOverviewStep(placements: readonly ThemeLayoutPlacement[]): Te
 export function assemble(theme: Theme, regions: readonly Region[], options: AssembleOptions = {}): string {
   const documentTitle = options.documentTitle ?? theme.title ?? 'Zoomable Canvas';
   const descriptors = regions.map(toThemeRegion);
+  const sourcePayload = buildSourcePayload(documentTitle, descriptors);
   const validationErrors = theme.validate?.(theme, descriptors);
   if (Array.isArray(validationErrors)) {
     const issues = validationErrors.filter((message): message is string => typeof message === 'string' && message.trim().length > 0);
@@ -185,7 +214,7 @@ export function assemble(theme: Theme, regions: readonly Region[], options: Asse
   const steps = descriptors.map((region, index) => createStep(theme, region, placements[index] ?? createFallbackPlacement(region, index)));
 
   if (theme.overview === 'auto') {
-    const overviewContent = theme.renderOverview?.({ theme, documentTitle }) ?? '';
+    const overviewContent = theme.renderOverview?.({ theme, documentTitle, version: options.version, sourcePayload }) ?? '';
     const overviewStep = createAutoOverviewStep(placements);
     steps.unshift({
       ...overviewStep,
