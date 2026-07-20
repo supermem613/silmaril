@@ -292,6 +292,40 @@ export const engineeringTokensCss = `
     font-weight: 600;
   }
 
+  .engineering-editor-panel__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .engineering-editor-panel__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border: 0;
+    border-radius: 0.45rem;
+    background: transparent;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 180ms ease, color 180ms ease;
+  }
+
+  .engineering-editor-panel__close:hover {
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    color: var(--text);
+  }
+
+  .engineering-editor-panel__close:focus-visible {
+    outline: 2px solid var(--accent-strong);
+    outline-offset: 2px;
+  }
+
   .engineering-editor-panel__input {
     min-height: 11rem;
     border: 1px solid var(--border);
@@ -383,6 +417,38 @@ export const engineeringTokensCss = `
     --strong: var(--dark-strong);
     background: #000000;
     color: var(--text);
+  }
+
+  body:not(:has(.step.active[data-id="overview"])) .step:not(.active) {
+    visibility: hidden;
+    opacity: 0 !important;
+    pointer-events: none;
+  }
+
+  .engineering-slide-cue {
+    position: fixed;
+    top: 50%;
+    z-index: 9000;
+    color: var(--muted);
+    font-family: "Segoe UI Variable Display", "Aptos Display", "Segoe UI", sans-serif;
+    font-size: 1.6rem;
+    font-weight: 400;
+    line-height: 1;
+    opacity: 0.55;
+    pointer-events: none;
+    transform: translateY(-50%);
+  }
+
+  .engineering-slide-cue[hidden] {
+    display: none;
+  }
+
+  .engineering-slide-cue--previous {
+    left: 0.75rem;
+  }
+
+  .engineering-slide-cue--next {
+    right: 0.75rem;
   }
 
   body:not(:has(.step.active[data-id="overview"])) .step.active .engineering-card[data-theme="dark"] {

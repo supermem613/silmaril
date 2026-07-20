@@ -77,10 +77,13 @@ test("embeds a slide-local Markdown editor with live slide rendering, runtime pe
 
   assert.match(html, /<div[^>]+data-editor-container/i, "expected an embedded editor container for the slide-local Markdown editor");
   assert.match(html, /<textarea[^>]+data-editor-input/i, "expected a textarea input for the focused slide's Markdown");
+  assert.match(html, /<button[^>]+data-editor-close[^>]+aria-label="Close Markdown editor"/i, "expected an explicit close control in the Markdown editor");
   assert.match(html, /<div[^>]+data-slide-content/i, "expected each rendered slide body to expose a live-update target");
   assert.match(html, /<div[^>]+data-editor-actions/i, "expected editor and export actions to share one compact control group");
   assert.match(html, /<button[^>]+data-editor-drawer-toggle[^>]+aria-expanded="false"/i, "expected a collapsed right-edge control drawer");
   assert.match(html, /<div[^>]+data-slide-progress[^>]+aria-live="polite"/i, "expected focused-slide progress markup");
+  assert.match(html, /data-slide-cue-previous[^>]+aria-hidden="true"/i, "expected a subtle previous-slide edge cue");
+  assert.match(html, /data-slide-cue-next[^>]+aria-hidden="true"/i, "expected a subtle next-slide edge cue");
   assert.ok(html.includes(markdownItBundle), "expected the complete local markdown-it browser bundle to be embedded in the single-file artifact");
 
   const inlineScripts = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/gi)].map((match) => match[1]).join("\n");
@@ -94,9 +97,11 @@ test("embeds a slide-local Markdown editor with live slide rendering, runtime pe
   assert.match(inlineScripts, /slideContent\.innerHTML\s*=\s*renderMarkdown\(/i, "expected Markdown edits to refresh the focused slide HTML");
   assert.match(inlineScripts, /drawerToggle\.setAttribute\(\s*['"]aria-expanded['"]/i, "expected the drawer runtime to expose its expanded state");
   assert.match(inlineScripts, /actions\.(?:removeAttribute\(\s*['"]hidden['"]\s*\)|setAttribute\(\s*['"]hidden['"])/i, "expected the drawer runtime to reveal and hide the editor actions");
+  assert.match(inlineScripts, /closeButton\.addEventListener\(\s*['"]click['"][\s\S]*?closeEditor\(\)[\s\S]*?toggle\.focus\(\)/i, "expected the editor close control to dismiss the Markdown panel and restore focus");
   assert.match(inlineScripts, /impress\(\)\.goto\(\s*active\s*,\s*0\s*\)/i, "expected viewport changes to recompute Impress geometry without animation");
   assert.match(inlineScripts, /visualViewport[\s\S]*?addEventListener\(\s*['"]resize['"]/i, "expected browser zoom changes to refresh through the visual viewport");
   assert.match(inlineScripts, /data-slide-progress-current[\s\S]*?data-slide-progress-total/i, "expected navigation to update current and total slide progress");
+  assert.match(inlineScripts, /previousCue[\s\S]*?index\s*>\s*0[\s\S]*?nextCue[\s\S]*?index\s*<\s*slides\.length\s*-\s*1/i, "expected navigation to show only valid previous and next edge cues");
   assert.match(inlineScripts, /(?:event\.key|event\.code)\s*===\s*['"]F5['"][\s\S]*?stopImmediatePropagation\(\)/i, "expected engineering navigation to preserve browser refresh instead of allowing Impress fullscreen");
   assert.match(inlineScripts, /document\.body\.appendChild\([^)]*editor[^)]*\)/i, "expected the editor shell to be moved outside the transformed Impress canvas");
 
@@ -115,6 +120,19 @@ test("embeds a slide-local Markdown editor with live slide rendering, runtime pe
   const editorDrawerToggleRule = extractCssRule(engineeringTokensCss, ".engineering-editor-drawer-toggle");
   assert.ok(editorDrawerToggleRule, "expected a right-edge drawer toggle CSS rule");
   assert.match(editorDrawerToggleRule ?? "", /border-radius:\s*[^;]*0[^;]*0/i, "expected the drawer toggle to attach visually to the right viewport edge");
+
+  const focusedNeighborRule = extractCssRule(
+    engineeringTokensCss,
+    "body:not(:has(.step.active[data-id=\"overview\"])) .step:not(.active)",
+  );
+  assert.ok(focusedNeighborRule, "expected focused mode to isolate the active slide");
+  assert.match(focusedNeighborRule ?? "", /visibility:\s*hidden/i, "expected neighboring slide bodies to stay outside the focused presentation frame");
+  assert.match(focusedNeighborRule ?? "", /pointer-events:\s*none/i, "expected hidden neighboring slides to be non-interactive");
+
+  const slideCueRule = extractCssRule(engineeringTokensCss, ".engineering-slide-cue");
+  assert.ok(slideCueRule, "expected a shared slide edge cue CSS rule");
+  assert.match(slideCueRule ?? "", /position:\s*fixed/i, "expected slide edge cues to remain anchored to the viewport");
+  assert.match(slideCueRule ?? "", /pointer-events:\s*none/i, "expected slide edge cues to remain unobtrusive");
 
   const slideProgressRule = extractCssRule(engineeringTokensCss, ".engineering-slide-progress");
   assert.ok(slideProgressRule, "expected a focused-slide progress CSS rule");

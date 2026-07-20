@@ -13,6 +13,8 @@ export function engineeringProgressMarkup(): string {
   <div class="engineering-slide-progress" data-slide-progress aria-live="polite" hidden>
     <span data-slide-progress-current>1</span> / <span data-slide-progress-total>1</span>
   </div>
+  <div class="engineering-slide-cue engineering-slide-cue--previous" data-slide-cue-previous aria-hidden="true" hidden>&lsaquo;</div>
+  <div class="engineering-slide-cue engineering-slide-cue--next" data-slide-cue-next aria-hidden="true" hidden>&rsaquo;</div>
 `;
 }
 
@@ -89,9 +91,16 @@ export const engineeringNavigationScript = `
         var progress = document.querySelector('[data-slide-progress]');
         var progressCurrent = progress ? progress.querySelector('[data-slide-progress-current]') : null;
         var progressTotal = progress ? progress.querySelector('[data-slide-progress-total]') : null;
+        var previousCue = document.querySelector('[data-slide-cue-previous]');
+        var nextCue = document.querySelector('[data-slide-cue-next]');
         if (progress && progress.parentElement !== document.body) {
           document.body.appendChild(progress);
         }
+        [previousCue, nextCue].forEach(function (cue) {
+          if (cue && cue.parentElement !== document.body) {
+            document.body.appendChild(cue);
+          }
+        });
         var updateProgress = function () {
           if (!progress || !progressCurrent || !progressTotal) {
             return;
@@ -100,11 +109,31 @@ export const engineeringNavigationScript = `
           var index = slides.indexOf(active);
           if (index < 0) {
             progress.setAttribute('hidden', '');
+            if (previousCue) {
+              previousCue.setAttribute('hidden', '');
+            }
+            if (nextCue) {
+              nextCue.setAttribute('hidden', '');
+            }
             return;
           }
           progressCurrent.textContent = String(index + 1);
           progressTotal.textContent = String(slides.length);
           progress.removeAttribute('hidden');
+          if (previousCue) {
+            if (index > 0) {
+              previousCue.removeAttribute('hidden');
+            } else {
+              previousCue.setAttribute('hidden', '');
+            }
+          }
+          if (nextCue) {
+            if (index < slides.length - 1) {
+              nextCue.removeAttribute('hidden');
+            } else {
+              nextCue.setAttribute('hidden', '');
+            }
+          }
         };
         var refreshScheduled = false;
         var scheduleGeometryRefresh = function () {

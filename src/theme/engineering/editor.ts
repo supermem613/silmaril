@@ -8,7 +8,12 @@ export function engineeringEditorMarkup(): string {
   return `
   <div class="engineering-editor-shell" data-editor-shell>
     <div class="engineering-editor-panel" id="engineering-editor-panel" data-editor-container hidden>
-      <label class="engineering-editor-panel__label" for="engineering-editor-input">Markdown</label>
+      <div class="engineering-editor-panel__header">
+        <label class="engineering-editor-panel__label" for="engineering-editor-input">Markdown</label>
+        <button class="engineering-editor-panel__close" type="button" data-editor-close aria-label="Close Markdown editor" title="Close Markdown editor">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
       <textarea class="engineering-editor-panel__input" id="engineering-editor-input" data-editor-input spellcheck="false"></textarea>
     </div>
     <div class="engineering-editor-drawer">
@@ -41,7 +46,8 @@ export const engineeringEditorScript = `
         var actions = editorShell ? editorShell.querySelector('[data-editor-actions]') : document.querySelector('[data-editor-actions]');
         var container = editorShell ? editorShell.querySelector('[data-editor-container]') : document.querySelector('[data-editor-container]');
         var input = editorShell ? editorShell.querySelector('[data-editor-input]') : document.querySelector('[data-editor-input]');
-        if (!toggle || !drawerToggle || !drawerIcon || !actions || !container || !input) {
+        var closeButton = editorShell ? editorShell.querySelector('[data-editor-close]') : document.querySelector('[data-editor-close]');
+        if (!toggle || !drawerToggle || !drawerIcon || !actions || !container || !input || !closeButton) {
           throw new Error('Silmaril editor markup is incomplete');
         }
 
@@ -169,6 +175,11 @@ export const engineeringEditorScript = `
           } else {
             openEditor();
           }
+        });
+
+        closeButton.addEventListener('click', function () {
+          closeEditor();
+          toggle.focus();
         });
 
         input.addEventListener('input', function (event) {
