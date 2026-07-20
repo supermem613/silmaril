@@ -7,13 +7,15 @@ const markdownItBundle = readFileSync(markdownItBundlePath, 'utf8');
 export function engineeringEditorMarkup(): string {
   return `
   <div class="engineering-editor-shell" data-editor-shell>
-    <button class="engineering-editor-toggle" type="button" data-editor-toggle aria-controls="engineering-editor-panel" aria-expanded="false" aria-label="Edit slide markdown" title="Edit slide markdown">
-      <span class="engineering-editor-toggle__label">Edit</span>
-    </button>
     <div class="engineering-editor-panel" id="engineering-editor-panel" data-editor-container hidden>
       <label class="engineering-editor-panel__label" for="engineering-editor-input">Markdown</label>
       <textarea class="engineering-editor-panel__input" id="engineering-editor-input" data-editor-input spellcheck="false"></textarea>
       <div class="engineering-editor-panel__preview" data-editor-preview aria-live="polite"></div>
+    </div>
+    <div class="engineering-editor-actions" data-editor-actions>
+      <button class="engineering-editor-toggle" type="button" data-editor-toggle aria-controls="engineering-editor-panel" aria-expanded="false" aria-label="Edit slide markdown" title="Edit slide markdown">
+        <span class="engineering-editor-toggle__label">Edit</span>
+      </button>
     </div>
   </div>
 `;
@@ -85,6 +87,14 @@ export const engineeringEditorScript = `
           preview.innerHTML = renderMarkdown(markdown || '');
         };
 
+        var renderActiveSlide = function (markdown) {
+          var activeStep = document.querySelector('.step.active');
+          var slideContent = activeStep ? activeStep.querySelector('[data-slide-content]') : null;
+          if (slideContent) {
+            slideContent.innerHTML = renderMarkdown(markdown || '');
+          }
+        };
+
         var bindSlide = function (slideId) {
           currentSlideId = slideId || null;
           if (!slideId) {
@@ -153,6 +163,7 @@ export const engineeringEditorScript = `
           var markdown = event.target.value;
           slide.markdown = markdown;
           render(markdown);
+          renderActiveSlide(markdown);
         });
 
         document.addEventListener('impress:stepenter', function () {

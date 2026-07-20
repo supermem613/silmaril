@@ -71,6 +71,8 @@ test("embeds a slide-local Markdown editor with Markdown-based live preview, run
   assert.match(html, /<div[^>]+data-editor-container/i, "expected an embedded editor container for the slide-local Markdown editor");
   assert.match(html, /<textarea[^>]+data-editor-input/i, "expected a textarea input for the focused slide's Markdown");
   assert.match(html, /<div[^>]+data-editor-preview/i, "expected a live preview container for the slide-local Markdown editor");
+  assert.match(html, /<div[^>]+data-slide-content/i, "expected each rendered slide body to expose a live-update target");
+  assert.match(html, /<div[^>]+data-editor-actions/i, "expected editor and export actions to share one compact control group");
   assert.ok(html.includes(markdownItBundle), "expected the complete local markdown-it browser bundle to be embedded in the single-file artifact");
 
   const inlineScripts = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/gi)].map((match) => match[1]).join("\n");
@@ -81,6 +83,9 @@ test("embeds a slide-local Markdown editor with Markdown-based live preview, run
   assert.match(inlineScripts, /\.markdown\s*=\s*(?:textarea\.value|event\.target\.value|markdown)/i, "expected the textarea input path to assign its value to the matching source-model slide markdown");
   assert.match(inlineScripts, /markdown-it|marked|remark|showdown/i, "expected the live preview path to use a bundled local Markdown renderer");
   assert.match(inlineScripts, /(?:render|renderInline)\(\s*(?:textarea\.value|event\.target\.value|markdown)/i, "expected the editor runtime to pass textarea Markdown to the preview renderer");
+  assert.match(inlineScripts, /querySelector\([^)]*data-slide-content[^)]*\)/i, "expected the editor runtime to find the focused slide's live-update target");
+  assert.match(inlineScripts, /slideContent\.innerHTML\s*=\s*renderMarkdown\(/i, "expected Markdown edits to refresh the focused slide HTML");
+  assert.match(inlineScripts, /(?:event\.key|event\.code)\s*===\s*['"]F5['"][\s\S]*?stopImmediatePropagation\(\)/i, "expected engineering navigation to preserve browser refresh instead of allowing Impress fullscreen");
   assert.match(inlineScripts, /document\.body\.appendChild\([^)]*editor[^)]*\)/i, "expected the editor shell to be moved outside the transformed Impress canvas");
 
   const editorShellRule = extractCssRule(engineeringTokensCss, ".engineering-editor-shell");
@@ -90,6 +95,14 @@ test("embeds a slide-local Markdown editor with Markdown-based live preview, run
   assert.ok(overviewEditorRule, "expected an overview-specific rule that hides the editor shell on the whole board");
   assert.match(overviewEditorRule ?? "", /opacity:\s*0/i, "expected the editor shell to be visually hidden on the whole board");
   assert.match(overviewEditorRule ?? "", /pointer-events:\s*none/i, "expected the editor shell to be non-interactive on the whole board");
+
+  const editorActionsRule = extractCssRule(engineeringTokensCss, ".engineering-editor-actions");
+  assert.ok(editorActionsRule, "expected a shared editor action group CSS rule");
+  assert.match(editorActionsRule ?? "", /display:\s*(?:inline-)?flex/i, "expected editor actions to use one aligned flex row");
+
+  const boardSignatureRule = extractCssRule(engineeringTokensCss, ".engineering-board-signature");
+  assert.ok(boardSignatureRule, "expected a board signature CSS rule");
+  assert.match(boardSignatureRule ?? "", /font-size:\s*0\.[4-7][0-9]*rem/i, "expected the board version signature to remain deliberately small");
 
   const engineeringCardStrongRule = extractCssRule(engineeringTokensCss, ".engineering-card strong");
   const editorPreviewStrongRule = extractCssRule(engineeringTokensCss, ".editor-preview strong") ?? extractCssRule(engineeringTokensCss, "[data-editor-preview] strong");

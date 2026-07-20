@@ -66,7 +66,7 @@ export function engineeringTheme(): Theme {
       return `
         <div class="engineering-card" data-theme="dark">
           <h2>${escapeHtml(region.title)}</h2>
-          ${region.content}
+          <div class="engineering-card__content" data-slide-content>${region.content}</div>
         </div>
       `;
     },

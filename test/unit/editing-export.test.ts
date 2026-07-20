@@ -80,17 +80,23 @@ test("exports the edited deck as Markdown from the source model via File System 
       nativeClickHandler = handler;
     },
   };
-  const nativeShell = {
-    parentElement: body,
-    querySelector() {
-      return nativeButton;
+  const nativeActions = {
+    firstChild: {},
+    insertBefore(button: unknown) {
+      assert.equal(button, nativeButton, "expected the export button to join the shared editor actions");
     },
   };
   const nativeDocument = {
     readyState: "complete",
     body,
-    querySelector() {
-      return nativeShell;
+    querySelector(selector: string) {
+      if (selector === "[data-editor-actions]") {
+        return nativeActions;
+      }
+      if (selector === "[data-export-markdown]") {
+        return nativeButton;
+      }
+      return null;
     },
     getElementById() {
       return sourceScript;
@@ -146,17 +152,23 @@ test("exports the edited deck as Markdown from the source model via File System 
       fallbackClickHandler = handler;
     },
   };
-  const fallbackShell = {
-    parentElement: body,
-    querySelector() {
-      return fallbackButton;
+  const fallbackActions = {
+    firstChild: {},
+    insertBefore(button: unknown) {
+      assert.equal(button, fallbackButton, "expected the fallback export button to join the shared editor actions");
     },
   };
   const fallbackDocument = {
     readyState: "complete",
     body,
-    querySelector() {
-      return fallbackShell;
+    querySelector(selector: string) {
+      if (selector === "[data-editor-actions]") {
+        return fallbackActions;
+      }
+      if (selector === "[data-export-markdown]") {
+        return fallbackButton;
+      }
+      return null;
     },
     getElementById() {
       return sourceScript;

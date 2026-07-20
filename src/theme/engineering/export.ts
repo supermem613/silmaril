@@ -1,10 +1,8 @@
 export function engineeringExportMarkup(): string {
   return `
-  <div class="engineering-editor-shell" data-export-shell style="right: 8.6rem; bottom: 1.25rem;">
-    <button class="engineering-editor-toggle" type="button" data-export-markdown aria-label="Export Markdown" title="Export Markdown">
-      <span class="engineering-editor-toggle__label">Export Markdown</span>
-    </button>
-  </div>
+  <button class="engineering-editor-toggle" type="button" data-export-markdown aria-label="Export Markdown" title="Export Markdown">
+    <span class="engineering-editor-toggle__label">Export Markdown</span>
+  </button>
 `;
 }
 
@@ -12,15 +10,12 @@ export const engineeringExportScript = `
   <script data-silmaril-export>
     (function () {
       var installExport = function () {
-        var exportShell = document.querySelector('[data-export-shell]');
-        if (exportShell && exportShell.parentElement !== document.body) {
-          document.body.appendChild(exportShell);
-        }
-
-        var button = exportShell ? exportShell.querySelector('[data-export-markdown]') : null;
-        if (!button) {
+        var actions = document.querySelector('[data-editor-actions]');
+        var button = document.querySelector('[data-export-markdown]');
+        if (!actions || !button) {
           throw new Error('Silmaril export markup is incomplete');
         }
+        actions.insertBefore(button, actions.firstChild);
 
         var sourceScript = document.getElementById('silmaril-source');
         var sourcePayload = sourceScript ? JSON.parse(sourceScript.textContent || 'null') : null;

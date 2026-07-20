@@ -112,14 +112,14 @@ export const engineeringTokensCss = `
 
   .engineering-board-signature {
     position: absolute;
-    right: 2rem;
-    bottom: 2rem;
+    right: 1rem;
+    bottom: 1rem;
     z-index: 2;
     color: var(--muted);
-    font-size: 0.95rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    opacity: 0.9;
+    font-size: 0.58rem;
+    font-weight: 500;
+    letter-spacing: 0.025em;
+    opacity: 0.68;
     pointer-events: none;
   }
 
@@ -166,6 +166,18 @@ export const engineeringTokensCss = `
     pointer-events: auto;
   }
 
+  .engineering-editor-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.25rem;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--surface) 90%, transparent);
+    box-shadow: 0 8px 24px var(--shadow);
+    backdrop-filter: blur(12px);
+  }
+
   body:has(.step.active[data-id="overview"]) .engineering-editor-shell {
     opacity: 0;
     pointer-events: none;
@@ -176,23 +188,23 @@ export const engineeringTokensCss = `
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    min-height: 2rem;
+    border: 0;
+    border-radius: 0.5rem;
+    background: transparent;
     color: var(--text);
-    padding: 0.4rem 0.7rem;
+    padding: 0.4rem 0.65rem;
     font-family: inherit;
     font-size: 0.78rem;
     font-weight: 600;
     cursor: pointer;
     pointer-events: auto;
-    backdrop-filter: blur(12px);
     transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
   }
 
   .engineering-editor-toggle:hover {
     transform: translateY(-1px);
-    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
   }
 
   .engineering-editor-toggle:focus-visible {
@@ -351,6 +363,10 @@ export const engineeringTokensCss = `
   .engineering-card td,
   .engineering-card th {
     color: var(--text);
+  }
+
+  .engineering-card__content {
+    display: contents;
   }
 
   .engineering-card p {
