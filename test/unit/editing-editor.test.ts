@@ -165,6 +165,13 @@ test("embeds a slide-local Markdown editor with live slide rendering, runtime pe
   assert.match(focusedDarkCardRule ?? "", /border-color:\s*transparent/i, "expected the focused dark slide border to disappear");
   assert.match(focusedDarkCardRule ?? "", /box-shadow:\s*none/i, "expected the focused dark slide shadow to disappear");
 
+  const focusedCardMotionRule = extractCssRule(
+    engineeringTokensCss,
+    "body:not(:has(.step.active[data-id=\"overview\"])) .step.active .engineering-card",
+  );
+  assert.ok(focusedCardMotionRule, "expected focused slides to define a stable card presentation state");
+  assert.match(focusedCardMotionRule ?? "", /transition:\s*none/i, "expected focused cards to avoid transient border highlighting during navigation");
+
   assert.match(engineeringTokensCss, /:root\s*\{[\s\S]*?--strong:\s*var\(--dark-strong\)/i, "expected the root dark defaults to bind --strong to --dark-strong");
   assert.match(engineeringTokensCss, /html\[data-theme="light"\][\s\S]*?--strong:\s*var\(--light-strong\)/i, "expected the light document theme block to bind --strong to --light-strong");
   assert.match(engineeringTokensCss, /\.engineering-card\[data-theme="light"\][\s\S]*?--strong:\s*var\(--light-strong\)/i, "expected .engineering-card[data-theme=light] to bind --strong to --light-strong");

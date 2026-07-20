@@ -15,7 +15,7 @@ Generated engineering Silmarils remain single-file `file://` artifacts. Their em
 
 On a focused slide, use **Edit** to open a Markdown textarea and accurate bundled live preview. Edits update the in-memory artifact only; they do not overwrite the original Markdown file. Use **Export Markdown** to save the title and every current slide in order. Supported browsers use the File System Access API, with a browser download fallback when that API is unavailable.
 
-The whole-board overview shows `silmaril · <version>` in the bottom-right corner, using the version from package/build metadata. Engineering `**bold**` text uses separate dark and light amber tokens that meet WCAG AA contrast, and the live preview matches the rendered slide.
+The whole-board overview shows `silmaril · <version>` in the bottom-right corner, using package/build metadata. The product name links to the Silmaril repository in a new tab. Engineering `**bold**` text uses separate dark and light amber tokens that meet WCAG AA contrast, and the live preview matches the rendered slide.
 
 ## Learn more
 

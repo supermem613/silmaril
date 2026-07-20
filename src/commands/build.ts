@@ -26,7 +26,14 @@ export interface BuildDependencies {
   openOutput?: OpenOutput;
 }
 
-const PACKAGE_VERSION = (JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "package.json"), "utf8")) as { version: string }).version;
+const PACKAGE_MANIFEST = JSON.parse(
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "package.json"), "utf8"),
+) as {
+  version: string;
+  repository?: { url?: string };
+};
+const PACKAGE_VERSION = PACKAGE_MANIFEST.version;
+const PACKAGE_REPOSITORY_URL = PACKAGE_MANIFEST.repository?.url;
 
 function buildTemporaryPath(outputPath: string): string {
   return `${outputPath}.${process.pid}.tmp`;
@@ -124,7 +131,11 @@ export async function buildCommand(input: string, opts: BuildOptions, deps: Buil
     const documentTitle = boardMode
       ? (parsedBoard as ReturnType<typeof parseHeadingBoard>).title
       : (parsedBoard as ReturnType<typeof parseScene>).attrs.title;
-    const html = assemble(theme, renderedRegions, { documentTitle, version: PACKAGE_VERSION });
+    const html = assemble(theme, renderedRegions, {
+      documentTitle,
+      version: PACKAGE_VERSION,
+      repositoryUrl: PACKAGE_REPOSITORY_URL,
+    });
     validateBuildOutput(html);
 
     const outputDirectory = dirname(outputPath);

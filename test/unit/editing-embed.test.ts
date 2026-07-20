@@ -46,6 +46,7 @@ test("embeds per-slide raw Markdown source and a package-version overview signat
   assert.equal(board.slides[1].body, "");
 
   const packageManifest = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as { version: string };
+  const repositoryUrl = "https://github.com/supermem613/silmaril";
   const theme = getTheme("engineering");
   const regions: Array<Region & { markdownSource: string }> = board.slides.map((slide) => ({
     id: slide.id,
@@ -54,7 +55,11 @@ test("embeds per-slide raw Markdown source and a package-version overview signat
     markdownSource: slide.body,
   }));
 
-  const assembleOptions = { documentTitle: board.title, version: packageManifest.version };
+  const assembleOptions = {
+    documentTitle: board.title,
+    version: packageManifest.version,
+    repositoryUrl,
+  };
   const html = assemble(theme, regions, assembleOptions);
   const scriptMatch = html.match(/<script type="application\/json" id="silmaril-source">([\s\S]*?)<\/script>/i);
   assert.ok(scriptMatch, "expected an embedded silmaril-source payload with per-slide raw Markdown and a bottom-right silmaril · <version> overview signature sourced from the package version");
@@ -77,7 +82,12 @@ test("embeds per-slide raw Markdown source and a package-version overview signat
     markdown: board.slides[1].body,
   });
 
-  const signature = `silmaril · ${packageManifest.version}`;
-  assert.match(html, new RegExp(escapeRegExp(signature)));
-  assert.ok(html.includes(signature), "expected the engineering artifact to include the exact package-version overview signature");
+  assert.match(
+    html,
+    new RegExp(
+      `<a[^>]+href="${escapeRegExp(repositoryUrl)}"[^>]+target="_blank"[^>]+rel="noreferrer"[^>]*>silmaril</a> · ${escapeRegExp(packageManifest.version)}`,
+      "i",
+    ),
+    "expected the product name in the overview signature to link to the package repository without linking the version",
+  );
 });

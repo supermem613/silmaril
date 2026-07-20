@@ -120,7 +120,23 @@ export const engineeringTokensCss = `
     font-weight: 500;
     letter-spacing: 0.025em;
     opacity: 0.68;
-    pointer-events: none;
+  }
+
+  .engineering-board-signature a {
+    color: inherit;
+    text-decoration: none;
+    pointer-events: auto;
+  }
+
+  .engineering-board-signature a:hover {
+    color: var(--text);
+    text-decoration: underline;
+  }
+
+  .engineering-board-signature a:focus-visible {
+    border-radius: 0.15rem;
+    outline: 2px solid var(--accent-strong);
+    outline-offset: 2px;
   }
 
   .engineering-slide-progress {
@@ -449,6 +465,10 @@ export const engineeringTokensCss = `
 
   .engineering-slide-cue--next {
     right: 0.75rem;
+  }
+
+  body:not(:has(.step.active[data-id="overview"])) .step.active .engineering-card {
+    transition: none;
   }
 
   body:not(:has(.step.active[data-id="overview"])) .step.active .engineering-card[data-theme="dark"] {

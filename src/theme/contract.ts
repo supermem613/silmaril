@@ -54,6 +54,7 @@ export interface ThemeSceneryContext {
   readonly theme: Theme;
   readonly documentTitle: string;
   readonly version?: string;
+  readonly repositoryUrl?: string;
   readonly sourcePayload?: ThemeSourcePayload;
 }
 

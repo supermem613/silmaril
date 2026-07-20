@@ -18,6 +18,7 @@ export interface Region {
 export interface AssembleOptions {
   readonly documentTitle?: string;
   readonly version?: string;
+  readonly repositoryUrl?: string;
 }
 
 const CAMERA_OVERVIEW_STYLE = 'width:0;padding:0;background:transparent;border:0;border-radius:0;box-shadow:none;opacity:0;pointer-events:none';
@@ -214,7 +215,13 @@ export function assemble(theme: Theme, regions: readonly Region[], options: Asse
   const steps = descriptors.map((region, index) => createStep(theme, region, placements[index] ?? createFallbackPlacement(region, index)));
 
   if (theme.overview === 'auto') {
-    const overviewContent = theme.renderOverview?.({ theme, documentTitle, version: options.version, sourcePayload }) ?? '';
+    const overviewContent = theme.renderOverview?.({
+      theme,
+      documentTitle,
+      version: options.version,
+      repositoryUrl: options.repositoryUrl,
+      sourcePayload,
+    }) ?? '';
     const overviewStep = createAutoOverviewStep(placements);
     steps.unshift({
       ...overviewStep,

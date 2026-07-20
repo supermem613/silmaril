@@ -85,6 +85,20 @@ export const engineeringToggleScript = `
 export const engineeringNavigationScript = `
   <script>
     (function () {
+      var installSlideTransitionPolicy = function () {
+        window.impress.addPreStepLeavePlugin(function (event) {
+          var current = event && event.target;
+          var next = event && event.detail ? event.detail.next : null;
+          if (current
+            && next
+            && !current.classList.contains('overview')
+            && !next.classList.contains('overview')) {
+            event.detail.transitionDuration = 0;
+          }
+        }, 10);
+      };
+      document.addEventListener('impress:init', installSlideTransitionPolicy, { once: true });
+
       var installNavigation = function () {
         var overview = document.querySelector('.step[data-id="overview"]');
         var slides = Array.prototype.slice.call(document.querySelectorAll('.step:not(.overview)'));

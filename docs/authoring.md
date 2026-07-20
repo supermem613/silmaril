@@ -114,7 +114,7 @@ On a focused slide, use **Edit** to open its Markdown textarea and accurate bund
 
 Use **Export Markdown** to save the current title and every slide in order, including edits and empty slide bodies. Silmaril uses the File System Access API when the browser provides it and a browser download fallback otherwise.
 
-The whole-board overview shows `silmaril · <version>` in the bottom-right corner. The version comes from package/build metadata rather than a theme constant. Engineering `**bold**` text uses separate dark and light amber tokens that meet WCAG AA contrast, and the live preview matches the rendered slide.
+The whole-board overview shows `silmaril · <version>` in the bottom-right corner. The product name links to the Silmaril repository in a new tab, and both the repository URL and version come from package/build metadata rather than theme constants. Engineering `**bold**` text uses separate dark and light amber tokens that meet WCAG AA contrast, and the live preview matches the rendered slide.
 
 ## 6. Themes
 

@@ -66,13 +66,18 @@ test('keeps engineering chrome minimal and slide typography readable', () => {
   assert.ok(headingSize >= 2.5, `expected readable slide headings, received ${headingSize}rem`);
 });
 
-test('animates board navigation and opens slides by click', () => {
+test('animates board entry while cutting directly between focused slides', () => {
   const canonical = loadCanonicalEngineeringDeck();
   assert.match(canonical, /active\[data-id="overview"\]/);
   assert.match(canonical, /closest\('\.step:not\(\.overview\)'\)/);
   assert.match(canonical, /impress\(\)\.goto\(step\)/);
   assert.match(canonical, /impress\(\)\.goto\(overview\)/);
   assert.doesNotMatch(canonical, /impress\(\)\.goto\(overview, 0\)/);
+  assert.match(canonical, /addPreStepLeavePlugin/);
+  assert.match(
+    canonical,
+    /current[\s\S]*?!current\.classList\.contains\('overview'\)[\s\S]*?!next\.classList\.contains\('overview'\)[\s\S]*?event\.detail\.transitionDuration\s*=\s*0/,
+  );
 });
 
 test('sizes focused engineering cards to use most of the viewport', () => {

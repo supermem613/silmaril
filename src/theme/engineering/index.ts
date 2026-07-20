@@ -33,6 +33,17 @@ function buildSourceScript(sourcePayload: ThemeSourcePayload | undefined): strin
   return `<script type="application/json" id="silmaril-source">${escapeJsonScriptText(JSON.stringify(sourcePayload, null, 2))}</script>`;
 }
 
+function buildBoardSignature(version: string | undefined, repositoryUrl: string | undefined): string {
+  if (!version) {
+    return '';
+  }
+
+  const productName = repositoryUrl
+    ? `<a href="${escapeHtml(repositoryUrl)}" target="_blank" rel="noreferrer">silmaril</a>`
+    : 'silmaril';
+  return `<div class="engineering-board-signature">${productName} · ${escapeHtml(version)}</div>`;
+}
+
 export function engineeringTheme(): Theme {
   return {
     name: 'engineering',
@@ -43,12 +54,12 @@ export function engineeringTheme(): Theme {
     viewport: 'width=device-width, initial-scale=1',
     globalCss: engineeringTokensCss,
     scenery: () => `${engineeringToggleMarkup()}${engineeringProgressMarkup()}${engineeringToggleScript}${engineeringNavigationScript}`,
-    renderOverview: ({ documentTitle, version, sourcePayload }) => `
+    renderOverview: ({ documentTitle, version, repositoryUrl, sourcePayload }) => `
       <div class="engineering-board-title">
         <h1>${escapeHtml(documentTitle)}</h1>
       </div>
       ${buildSourceScript(sourcePayload)}
-      ${version ? `<div class="engineering-board-signature">silmaril · ${escapeHtml(version)}</div>` : ''}
+      ${buildBoardSignature(version, repositoryUrl)}
       ${sourcePayload ? `${engineeringEditorMarkup()}${engineeringEditorScript}${engineeringExportMarkup()}${engineeringExportScript}` : ''}
     `,
     impressAttributes: {
