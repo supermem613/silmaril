@@ -299,14 +299,30 @@ export const engineeringTokensCss = `
     position: fixed;
     top: 50%;
     z-index: 9000;
+    margin: 0;
+    padding: 0.4rem 0.6rem;
+    background: transparent;
+    border: 0;
     color: var(--muted);
     font-family: "Segoe UI Variable Display", "Aptos Display", "Segoe UI", sans-serif;
     font-size: 1.6rem;
     font-weight: 400;
     line-height: 1;
     opacity: 0.55;
-    pointer-events: none;
+    cursor: pointer;
     transform: translateY(-50%);
+    transition: opacity 0.15s ease;
+  }
+
+  .engineering-slide-cue:hover,
+  .engineering-slide-cue:focus-visible {
+    opacity: 1;
+  }
+
+  .engineering-slide-cue:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 6px;
   }
 
   .engineering-slide-cue[hidden] {

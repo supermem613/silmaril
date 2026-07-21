@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildPresentation, type PresentationSlide } from "../../src/presentation/index.js";
+import { engineeringNavigationScript, engineeringProgressMarkup } from "../../src/presentation/toggle.js";
 import { engineeringTokensCss } from "../../src/presentation/tokens.css.js";
 
 function parseHexColor(value: string): [number, number, number] {
@@ -122,7 +123,8 @@ test("keeps focused-slide navigation chrome anchored to the viewport", () => {
   const slideCueRule = extractCssRule(engineeringTokensCss, ".engineering-slide-cue");
   assert.ok(slideCueRule, "expected a shared slide edge cue CSS rule");
   assert.match(slideCueRule ?? "", /position:\s*fixed/i, "expected slide edge cues to remain anchored to the viewport");
-  assert.match(slideCueRule ?? "", /pointer-events:\s*none/i, "expected slide edge cues to remain unobtrusive");
+  assert.match(slideCueRule ?? "", /cursor:\s*pointer/i, "expected slide edge cues to be clickable prev/next controls");
+  assert.doesNotMatch(slideCueRule ?? "", /pointer-events:\s*none/i, "expected slide edge cues to accept clicks");
 
   const focusedNeighborRule = extractCssRule(
     engineeringTokensCss,
@@ -130,6 +132,17 @@ test("keeps focused-slide navigation chrome anchored to the viewport", () => {
   );
   assert.ok(focusedNeighborRule, "expected focused mode to isolate the active slide");
   assert.match(focusedNeighborRule ?? "", /visibility:\s*hidden/i, "expected neighboring slide bodies to stay outside the focused presentation frame");
+});
+
+test("wires the on-screen prev/next cues to move between slides", () => {
+  const progress = engineeringProgressMarkup();
+  assert.match(progress, /<button[^>]*data-slide-cue-previous[^>]*aria-label="Previous slide"/i, "expected a real Previous slide button");
+  assert.match(progress, /<button[^>]*data-slide-cue-next[^>]*aria-label="Next slide"/i, "expected a real Next slide button");
+
+  assert.match(engineeringNavigationScript, /previousCue\.addEventListener\('click'/, "expected the previous cue to be click-wired");
+  assert.match(engineeringNavigationScript, /nextCue\.addEventListener\('click'/, "expected the next cue to be click-wired");
+  assert.match(engineeringNavigationScript, /window\.impress\(\)\.prev\(\)/, "expected the previous cue to step backward");
+  assert.match(engineeringNavigationScript, /window\.impress\(\)\.next\(\)/, "expected the next cue to step forward");
 });
 
 test("omits the in-browser editor and live reload from the default build", () => {
