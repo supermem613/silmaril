@@ -1,0 +1,14 @@
+{
+  "name": "obsidian-plugin",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.mjs"
+  },
+  "devDependencies": {
+    "builtin-modules": "5.0.0",
+    "esbuild": "0.25.0",
+    "obsidian": "1.7.0",
+    "typescript": "5.9.3"
+  }
+}
