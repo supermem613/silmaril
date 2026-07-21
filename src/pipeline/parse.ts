@@ -92,26 +92,6 @@ function parseSlides(markdown: string): SlideIR[] {
   }));
 }
 
-// Rewrites only the body of one slide, leaving frontmatter, the title, every
-// other slide, and inter-slide blank lines untouched. Replacing a slide body
-// with its own current value is a no-op, so repeated autosaves do not drift.
-export function replaceSlideBody(markdown: string, slideId: string, newBody: string): string {
-  const target = slideRanges(markdown).find((range) => range.id === slideId);
-  if (!target) {
-    throw new Error(`unknown slide: ${slideId}`);
-  }
-
-  const eol = markdown.includes("\r\n") ? "\r\n" : "\n";
-  const lines = markdown.split(/\r?\n/);
-  const newBodyLines = newBody.replace(/\r\n?/g, "\n").split("\n");
-  const next = [
-    ...lines.slice(0, target.bodyStart),
-    ...newBodyLines,
-    ...lines.slice(target.contentEnd),
-  ];
-  return next.join(eol);
-}
-
 function linesOutsideFences(markdown: string): string[] {
   const lines: string[] = [];
   let inFence = false;

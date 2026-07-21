@@ -16,7 +16,6 @@ function buildHtml(source: string, inputDirectory: string): string {
       id: slide.id,
       title: slide.title,
       content: renderMarkdown(inlineMarkdown(slide.body, inputDirectory).markdown),
-      markdownSource: slide.body,
     })),
     { documentTitle: board.title },
   );

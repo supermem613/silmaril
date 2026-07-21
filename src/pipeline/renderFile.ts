@@ -9,7 +9,6 @@ import { buildPresentation } from "../presentation/index.js";
 export interface RenderPresentationOptions {
   readonly version?: string;
   readonly repositoryUrl?: string;
-  readonly editor?: boolean;
   readonly liveReload?: boolean;
 }
 
@@ -28,13 +27,11 @@ export function renderPresentationFromMarkdown(
     id: slide.id,
     title: slide.title,
     content: renderMarkdown(inlineMarkdown(slide.body, dirname(inputPath)).markdown),
-    markdownSource: slide.body,
   }));
   const html = buildPresentation(slides, {
     documentTitle: board.title,
     version: options.version,
     repositoryUrl: options.repositoryUrl,
-    editor: options.editor,
     liveReload: options.liveReload,
   });
   validateBuildOutput(html);

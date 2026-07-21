@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -37,43 +37,36 @@ async function withServer(run: (baseUrl: string, filePath: string) => Promise<vo
   }
 }
 
-test("serve renders the deck with editor and live reload wired in", async () => {
+test("serve renders the deck with the live-reload client wired in", async () => {
   await withServer(async (baseUrl) => {
     const response = await fetch(`${baseUrl}/`);
     assert.equal(response.status, 200);
     const html = await response.text();
-    assert.match(html, /data-editor-container/i, "expected the served page to include the editor");
-    assert.match(html, /data-silmaril-refresh/i, "expected the served page to include the refresh button");
+    assert.match(html, /My Deck/, "expected the served page to render the deck");
     assert.match(html, /__silmaril\/livereload/i, "expected the served page to connect to live reload");
+    assert.doesNotMatch(html, /data-editor/i, "expected the served page to omit the in-browser editor");
+    assert.doesNotMatch(html, /data-silmaril-refresh/i, "expected the served page to omit a refresh button");
   });
 });
 
-test("serve writes edited slide bodies back to the source file and preserves frontmatter", async () => {
-  await withServer(async (baseUrl, filePath) => {
-    const response = await fetch(`${baseUrl}/__silmaril/save`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slideId: "first", markdown: "Edited first body." }),
-    });
-    assert.equal(response.status, 200);
-    assert.deepEqual(await response.json(), { ok: true });
-
-    const saved = readFileSync(filePath, "utf8");
-    assert.ok(saved.startsWith("---\ntitle: Deck\n---\n# My Deck"), "expected frontmatter and title to survive the write-back");
-    assert.match(saved, /## First\nEdited first body\./, "expected the first slide body to be rewritten in place");
-    assert.match(saved, /## Second\n\nSecond body\./, "expected the second slide to be untouched");
-  });
-});
-
-test("serve rejects a save for an unknown slide id", async () => {
+test("serve exposes a live-reload event stream", async () => {
   await withServer(async (baseUrl) => {
-    const response = await fetch(`${baseUrl}/__silmaril/save`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slideId: "missing", markdown: "body" }),
+    const response = await fetch(`${baseUrl}/__silmaril/livereload`, {
+      headers: { Accept: "text/event-stream" },
     });
+    try {
+      assert.equal(response.status, 200);
+      assert.match(response.headers.get("content-type") ?? "", /text\/event-stream/);
+    } finally {
+      await response.body?.cancel();
+    }
+  });
+});
+
+test("serve returns 404 for unknown routes", async () => {
+  await withServer(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/does-not-exist`);
     assert.equal(response.status, 404);
-    const payload = (await response.json()) as { ok: boolean };
-    assert.equal(payload.ok, false);
+    await response.text();
   });
 });

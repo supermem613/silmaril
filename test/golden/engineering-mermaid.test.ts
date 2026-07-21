@@ -17,7 +17,6 @@ test("renders Mermaid fences as deterministic inline SVG", () => {
       id: slide.id,
       title: slide.title,
       content: renderMarkdown(inlineMarkdown(slide.body, dirname(sourcePath)).markdown),
-      markdownSource: slide.body,
     })),
     { documentTitle: board.title },
   );

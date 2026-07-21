@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { renderTemplate, type TemplateStep } from "../pipeline/template.js";
-import { engineeringEditorMarkup, engineeringEditorScript } from "./editor.js";
-import { engineeringLiveReloadMarkup, engineeringLiveReloadScript } from "./livereload.js";
+import { engineeringLiveReloadScript } from "./livereload.js";
 import { engineeringTokensCss } from "./tokens.css.js";
 import {
   engineeringNavigationScript,
@@ -14,14 +13,12 @@ export interface PresentationSlide {
   readonly id: string;
   readonly title: string;
   readonly content: string;
-  readonly markdownSource: string;
 }
 
 export interface PresentationOptions {
   readonly documentTitle: string;
   readonly version?: string;
   readonly repositoryUrl?: string;
-  readonly editor?: boolean;
   readonly liveReload?: boolean;
 }
 
@@ -40,25 +37,6 @@ function escapeHtml(value: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
-}
-
-function escapeJsonScriptText(value: string): string {
-  return value
-    .replace(/</g, "\\u003c")
-    .replace(/>/g, "\\u003e")
-    .replace(/&/g, "\\u0026");
-}
-
-function buildSourceScript(title: string, slides: readonly PresentationSlide[]): string {
-  const payload = {
-    title,
-    slides: slides.map((slide) => ({
-      id: slide.id,
-      title: slide.title,
-      markdown: slide.markdownSource,
-    })),
-  };
-  return `<script type="application/json" id="silmaril-source">${escapeJsonScriptText(JSON.stringify(payload, null, 2))}</script>`;
 }
 
 function buildSignature(version: string | undefined, repositoryUrl: string | undefined): string {
@@ -112,15 +90,11 @@ export function buildPresentation(
   options: PresentationOptions,
 ): string {
   const placements = layoutSlides(slides);
-  const editorBlock = options.editor
-    ? `${buildSourceScript(options.documentTitle, slides)}${engineeringEditorMarkup()}${engineeringEditorScript}`
-    : "";
   const overviewContent = `
       <div class="engineering-board-title">
         <h1>${escapeHtml(options.documentTitle)}</h1>
       </div>
       ${buildSignature(options.version, options.repositoryUrl)}
-      ${editorBlock}
   `;
   const steps: TemplateStep[] = [
     createOverviewStep(placements, overviewContent),
@@ -137,9 +111,7 @@ export function buildPresentation(
       `,
     })),
   ];
-  const liveReloadBlock = options.liveReload
-    ? `${engineeringLiveReloadMarkup()}${engineeringLiveReloadScript}`
-    : "";
+  const liveReloadBlock = options.liveReload ? engineeringLiveReloadScript : "";
   const scenery = `${engineeringToggleMarkup()}${engineeringProgressMarkup()}${liveReloadBlock}${engineeringToggleScript}${engineeringNavigationScript}`;
 
   return renderTemplate({

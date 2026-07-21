@@ -28,9 +28,9 @@ Use the arrow keys to move between slides. Focused-slide mode shows only the act
 
 ## Edit with live reload
 
-Run `silmaril serve talk.md` to open the deck in a local server with live reload. Open the Markdown editor from the right-edge control drawer. Changes update the focused slide as a live preview, and the live preview matches the rendered slide. Edits autosave back to the Markdown file, so the file remains the source of truth. A Refresh button reloads from source for a full-fidelity re-render, including Mermaid. Editing the Markdown file in another program reloads the browser automatically.
+Run `silmaril serve talk.md` to open the deck in a local server with live reload. Edit the Markdown in your own editor and the browser reloads on save, so the Markdown file stays the source of truth. Rendering is full fidelity, including Mermaid.
 
-Strong emphasis uses the same amber treatment in the slide and live preview with WCAG AA contrast in dark and light modes.
+Strong emphasis uses the same amber treatment across dark and light modes with WCAG AA contrast.
 
 ## Commands
 

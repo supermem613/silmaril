@@ -70,8 +70,8 @@ export const commandSpecs: CommandSpec[] = [
   },
   {
     path: ["serve"],
-    summary: "Serve a Markdown presentation locally with live reload and in-browser editing.",
-    effect: "mutate-local",
+    summary: "Serve a Markdown presentation locally with live reload.",
+    effect: "read",
     input: {
       positionals: ["input"],
       flags: [
@@ -79,9 +79,9 @@ export const commandSpecs: CommandSpec[] = [
         { name: "--open", type: "boolean", summary: "Open the presentation in the default browser." },
       ],
     },
-    output: { documented: true, schema: "ServeResult", coverage: ["network", "filesystem", "stdout", "stderr"] },
+    output: { documented: true, schema: "ServeResult", coverage: ["network", "stdout", "stderr"] },
     examples: ["serve slides.md", "serve slides.md --port 4000", "serve slides.md --open"],
-    readmeSummary: "serve - Serve a Markdown presentation locally with live reload and in-browser editing.",
+    readmeSummary: "serve - Serve a Markdown presentation locally with live reload.",
     skillReferences: ["serve", "live-reload"],
   },
   {

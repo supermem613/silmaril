@@ -57,4 +57,4 @@ node dist/cli.js serve talk.md --port 4000
 node dist/cli.js serve talk.md --open
 ```
 
-`serve` (`silmaril serve`) starts a local server with live reload on port 5173 by default. Open the Markdown editor from the right-edge control drawer. Editing updates the focused slide as a live preview, and the live preview matches the rendered slide. Edits autosave back to the Markdown file, so the file stays the source of truth. The Refresh button reloads from source for a full-fidelity re-render, including Mermaid. Editing the file in another program reloads the browser automatically. Strong emphasis uses an amber color with WCAG AA contrast in both display modes.
+`serve` (`silmaril serve`) starts a local server with live reload on port 5173 by default. Edit the Markdown in your own editor and the browser reloads on save, so the file stays the source of truth. Rendering is full fidelity, including Mermaid. Strong emphasis uses an amber color with WCAG AA contrast in both display modes.

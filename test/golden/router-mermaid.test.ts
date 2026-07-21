@@ -16,7 +16,6 @@ function buildRouterDeck(): { deck: string; content: string } {
     id: slide.id,
     title: slide.title,
     content: renderMarkdown(inlineMarkdown(slide.body, dirname(sourcePath)).markdown),
-    markdownSource: slide.body,
   }));
   const deck = buildPresentation(slides, { documentTitle: board.title });
   const content = slides.map((slide) => slide.content).join("\n");
