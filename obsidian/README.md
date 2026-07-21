@@ -40,13 +40,11 @@ editor and updates after the file saves.
 
 ## Security decision
 
-The preview uses a Blob URL iframe with `sandbox="allow-scripts
-allow-same-origin"`. This combination is acceptable here only because the frame
-hosts Silmaril's own trusted, self-generated deck. It must not host untrusted
-remote content.
-
-A future hardening step can load the generated deck from a real `file://` source
-and narrow the frame permissions after that path is proven in Obsidian desktop.
+The preview writes the generated deck to a managed local file and loads its
+`file://` URL in an iframe with `sandbox="allow-scripts allow-same-origin"`.
+This combination is acceptable here only because the frame hosts Silmaril's own
+trusted, self-generated deck. It must not host untrusted remote content. The
+plugin removes the managed file when the preview closes.
 
 ## Community submission
 
