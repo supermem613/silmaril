@@ -156,6 +156,22 @@ test("wires the on-screen prev/next cues to move between slides", () => {
   assert.match(engineeringNavigationScript, /window\.impress\(\)\.next\(\)/, "expected the next cue to step forward");
 });
 
+test("counts slides excluding the overview step so numbering starts at 1", () => {
+  // The overview step is identified only by data-id="overview"; it carries no
+  // "overview" class, so the slide roster must exclude it by data-id or the
+  // first real slide is mislabeled #2 and the total is inflated by one.
+  assert.match(
+    engineeringNavigationScript,
+    /querySelectorAll\('\.step:not\(\[data-id="overview"\]\)'\)/,
+    "expected the slide roster to exclude the overview step by data-id",
+  );
+  assert.doesNotMatch(
+    engineeringNavigationScript,
+    /var slides = Array\.prototype\.slice\.call\(document\.querySelectorAll\('\.step:not\(\.overview\)'\)\)/,
+    "expected the brittle class-based overview exclusion to be gone from the slide roster",
+  );
+});
+
 test("omits the in-browser editor and live reload from the default build", () => {
   const slides: PresentationSlide[] = [
     { id: "slide-1", title: "Slide 1", content: "<p>Slide 1</p>" },

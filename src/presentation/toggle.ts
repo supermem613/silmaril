@@ -101,7 +101,7 @@ export const engineeringNavigationScript = `
 
       var installNavigation = function () {
         var overview = document.querySelector('.step[data-id="overview"]');
-        var slides = Array.prototype.slice.call(document.querySelectorAll('.step:not(.overview)'));
+        var slides = Array.prototype.slice.call(document.querySelectorAll('.step:not([data-id="overview"])'));
         var progress = document.querySelector('[data-slide-progress]');
         var progressCurrent = progress ? progress.querySelector('[data-slide-progress-current]') : null;
         var progressTotal = progress ? progress.querySelector('[data-slide-progress-total]') : null;
