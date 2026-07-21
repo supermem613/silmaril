@@ -57,6 +57,7 @@ test("embeds per-slide raw Markdown source and a package-version overview signat
     documentTitle: board.title,
     version: packageManifest.version,
     repositoryUrl,
+    editor: true,
   };
   const html = buildPresentation(slides, presentationOptions);
   const scriptMatch = html.match(/<script type="application\/json" id="silmaril-source">([\s\S]*?)<\/script>/i);

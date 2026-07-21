@@ -43,6 +43,21 @@ program
   });
 
 program
+  .command("serve <input>")
+  .description("Serve a Markdown presentation locally with live reload and in-browser editing")
+  .option("--port <port>", "Port to listen on", String(5173))
+  .option("--open", "Open the presentation in the default browser")
+  .action(async (input: string, opts: { port?: string; open?: boolean }) => {
+    const { serveCommand } = await import("./commands/serve.js");
+    const port = opts.port === undefined ? undefined : Number.parseInt(opts.port, 10);
+    if (port !== undefined && (!Number.isInteger(port) || port < 0 || port > 65535)) {
+      console.error(`Invalid --port value: ${opts.port}`);
+      process.exit(1);
+    }
+    await serveCommand(input, { port, open: opts.open });
+  });
+
+program
   .command("update")
   .description("Self-update with git pull, npm install, and rebuild")
   .option("--json", "Emit machine-readable JSON instead of human output")

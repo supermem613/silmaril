@@ -4,11 +4,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, extname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { emitJsonFailure, emitJsonSuccess } from "../output.js";
-import { inlineMarkdown } from "../pipeline/inline.js";
-import { parseBoard } from "../pipeline/parse.js";
-import { renderMarkdown } from "../pipeline/render.js";
-import { validateBuildOutput } from "../pipeline/validate.js";
-import { buildPresentation } from "../presentation/index.js";
+import { renderPresentationFromFile } from "../pipeline/renderFile.js";
 
 export type BuildOptions = {
   out?: string;
@@ -63,20 +59,10 @@ export async function buildCommand(input: string, opts: BuildOptions, deps: Buil
     const outputPath = opts.out
       ? (isAbsolute(opts.out) ? opts.out : resolve(process.cwd(), opts.out))
       : defaultOutputPath(inputPath);
-    const markdown = readFileSync(inputPath, "utf8");
-    const board = parseBoard(markdown, basename(inputPath, extname(inputPath)));
-    const slides = board.slides.map((slide) => ({
-      id: slide.id,
-      title: slide.title,
-      content: renderMarkdown(inlineMarkdown(slide.body, dirname(inputPath)).markdown),
-      markdownSource: slide.body,
-    }));
-    const html = buildPresentation(slides, {
-      documentTitle: board.title,
+    const { html, slideCount } = renderPresentationFromFile(inputPath, {
       version: PACKAGE_VERSION,
       repositoryUrl: PACKAGE_REPOSITORY_URL,
     });
-    validateBuildOutput(html);
 
     mkdirSync(dirname(outputPath), { recursive: true });
     temporaryPath = `${outputPath}.${process.pid}.tmp`;
@@ -94,7 +80,7 @@ export async function buildCommand(input: string, opts: BuildOptions, deps: Buil
     emitJsonSuccess("build", {
       outputPath,
       byteCount: Buffer.byteLength(html, "utf8"),
-      slideCount: slides.length,
+      slideCount,
       open,
     });
     process.exit(0);

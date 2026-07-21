@@ -104,6 +104,25 @@ export const engineeringEditorScript = `
           }
         };
 
+        var autosaveTimer = null;
+        var scheduleAutosave = function (slideId, markdown) {
+          if (!window.__silmarilServe || !slideId) {
+            return;
+          }
+          if (autosaveTimer) {
+            window.clearTimeout(autosaveTimer);
+          }
+          // Debounce so a burst of keystrokes persists once the typing pauses.
+          autosaveTimer = window.setTimeout(function () {
+            autosaveTimer = null;
+            fetch('/__silmaril/save', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ slideId: slideId, markdown: markdown }),
+            }).catch(function () {});
+          }, 500);
+        };
+
         var bindSlide = function (slideId) {
           currentSlideId = slideId || null;
           if (!slideId) {
@@ -192,6 +211,7 @@ export const engineeringEditorScript = `
           var markdown = event.target.value;
           slide.markdown = markdown;
           renderActiveSlide(markdown);
+          scheduleAutosave(slideId, markdown);
         });
 
         document.addEventListener('impress:stepenter', function () {

@@ -65,7 +65,7 @@ test("embeds a slide-local Markdown editor with live slide rendering, runtime pe
     markdownSource: slide.body,
   }));
 
-  const html = buildPresentation(slides, { documentTitle: board.title, version: "test" });
+  const html = buildPresentation(slides, { documentTitle: board.title, version: "test", editor: true });
   const markdownItBundle = readFileSync(new URL("../../node_modules/markdown-it/dist/markdown-it.min.js", import.meta.url), "utf8");
   const sourcePayloadMatch = html.match(/<script type="application\/json" id="silmaril-source">([\s\S]*?)<\/script>/i);
   assert.ok(sourcePayloadMatch, "expected the engineering artifact to include the silmaril-source payload for the slide-local editor runtime");
@@ -183,6 +183,28 @@ test("embeds a slide-local Markdown editor with live slide rendering, runtime pe
   const lightSurface = "#FFFFFF";
   assert.ok(contrastRatio(darkStrong, darkSurface) >= 4.5, `expected --dark-strong ${darkStrong} to meet WCAG AA contrast against ${darkSurface}`);
   assert.ok(contrastRatio(lightStrong, lightSurface) >= 4.5, `expected --light-strong ${lightStrong} to meet WCAG AA contrast against ${lightSurface}`);
+});
+
+test("gates the editor and live reload behind explicit options", () => {
+  const slides: PresentationSlide[] = [
+    { id: "slide-1", title: "Slide 1", content: "<p>Slide 1</p>", markdownSource: "Slide 1" },
+  ];
+
+  const plain = buildPresentation(slides, { documentTitle: "Plain" });
+  assert.doesNotMatch(plain, /data-editor-container/i, "expected the default build to omit the editor");
+  assert.doesNotMatch(plain, /id="silmaril-source"/i, "expected the default build to omit the editor source payload");
+  assert.doesNotMatch(plain, /data-silmaril-refresh/i, "expected the default build to omit the live-reload refresh button");
+  assert.doesNotMatch(plain, /__silmaril\/livereload/i, "expected the default build to omit the live-reload client");
+
+  const editing = buildPresentation(slides, { documentTitle: "Editing", editor: true });
+  assert.match(editing, /data-editor-container/i, "expected the editor build to include the editor container");
+  assert.match(editing, /id="silmaril-source"/i, "expected the editor build to include the editor source payload");
+  assert.doesNotMatch(editing, /data-silmaril-refresh/i, "expected the editor-only build to still omit live reload");
+
+  const live = buildPresentation(slides, { documentTitle: "Live", editor: true, liveReload: true });
+  assert.match(live, /data-silmaril-refresh/i, "expected the live-reload build to include the refresh button");
+  assert.match(live, /__silmaril\/livereload/i, "expected the live-reload build to connect to the live-reload endpoint");
+  assert.match(live, /window\.__silmarilServe\s*=\s*true/i, "expected the live-reload build to flag serve mode for editor autosave");
 });
 
 test("wraps the engineering board after five slides and centers the final row", () => {

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { renderTemplate, type TemplateStep } from "../pipeline/template.js";
 import { engineeringEditorMarkup, engineeringEditorScript } from "./editor.js";
-import { engineeringExportMarkup, engineeringExportScript } from "./export.js";
+import { engineeringLiveReloadMarkup, engineeringLiveReloadScript } from "./livereload.js";
 import { engineeringTokensCss } from "./tokens.css.js";
 import {
   engineeringNavigationScript,
@@ -21,6 +21,8 @@ export interface PresentationOptions {
   readonly documentTitle: string;
   readonly version?: string;
   readonly repositoryUrl?: string;
+  readonly editor?: boolean;
+  readonly liveReload?: boolean;
 }
 
 interface SlidePlacement {
@@ -110,14 +112,15 @@ export function buildPresentation(
   options: PresentationOptions,
 ): string {
   const placements = layoutSlides(slides);
-  const sourceScript = buildSourceScript(options.documentTitle, slides);
+  const editorBlock = options.editor
+    ? `${buildSourceScript(options.documentTitle, slides)}${engineeringEditorMarkup()}${engineeringEditorScript}`
+    : "";
   const overviewContent = `
       <div class="engineering-board-title">
         <h1>${escapeHtml(options.documentTitle)}</h1>
       </div>
-      ${sourceScript}
       ${buildSignature(options.version, options.repositoryUrl)}
-      ${engineeringEditorMarkup()}${engineeringEditorScript}${engineeringExportMarkup()}${engineeringExportScript}
+      ${editorBlock}
   `;
   const steps: TemplateStep[] = [
     createOverviewStep(placements, overviewContent),
@@ -134,7 +137,10 @@ export function buildPresentation(
       `,
     })),
   ];
-  const scenery = `${engineeringToggleMarkup()}${engineeringProgressMarkup()}${engineeringToggleScript}${engineeringNavigationScript}`;
+  const liveReloadBlock = options.liveReload
+    ? `${engineeringLiveReloadMarkup()}${engineeringLiveReloadScript}`
+    : "";
+  const scenery = `${engineeringToggleMarkup()}${engineeringProgressMarkup()}${liveReloadBlock}${engineeringToggleScript}${engineeringNavigationScript}`;
 
   return renderTemplate({
     title: options.documentTitle,

@@ -69,6 +69,22 @@ export const commandSpecs: CommandSpec[] = [
     skillReferences: ["build", "presentation"],
   },
   {
+    path: ["serve"],
+    summary: "Serve a Markdown presentation locally with live reload and in-browser editing.",
+    effect: "mutate-local",
+    input: {
+      positionals: ["input"],
+      flags: [
+        { name: "--port", type: "string", summary: "Port to listen on. Defaults to 5173." },
+        { name: "--open", type: "boolean", summary: "Open the presentation in the default browser." },
+      ],
+    },
+    output: { documented: true, schema: "ServeResult", coverage: ["network", "filesystem", "stdout", "stderr"] },
+    examples: ["serve slides.md", "serve slides.md --port 4000", "serve slides.md --open"],
+    readmeSummary: "serve - Serve a Markdown presentation locally with live reload and in-browser editing.",
+    skillReferences: ["serve", "live-reload"],
+  },
+  {
     path: ["update"],
     summary: "Self-update this silmaril checkout with git pull, npm install, and rebuild.",
     effect: "mutate-local",

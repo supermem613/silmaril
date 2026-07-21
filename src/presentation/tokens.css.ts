@@ -300,6 +300,38 @@ export const engineeringTokensCss = `
     outline-offset: 3px;
   }
 
+  .silmaril-refresh {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 10001;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    border-radius: 0.5rem;
+    background: color-mix(in srgb, var(--light-bg) 88%, transparent);
+    color: var(--text);
+    padding: 0.4rem 0.75rem;
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+  }
+
+  .silmaril-refresh:hover {
+    transform: translateY(-1px);
+    background: color-mix(in srgb, var(--accent) 16%, var(--light-bg));
+  }
+
+  .silmaril-refresh:focus-visible {
+    outline: 3px solid var(--accent-strong);
+    outline-offset: 3px;
+  }
+
   .engineering-editor-panel {
     display: flex;
     flex-direction: column;
