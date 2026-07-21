@@ -35,6 +35,20 @@ When the `#` heading is omitted, the Markdown filename becomes the title.
 
 Slide bodies support paragraphs, lists, tables, emphasis, local images, syntax-highlighted code, and Mermaid diagrams. Raw HTML is escaped. Local images are embedded in the HTML output. Remote links and remote images are rejected so the presentation remains self-contained.
 
+You can also author two equal-width columns with a copy-paste block:
+
+```markdown
+:::columns
+Left column body with paragraphs, lists, and emphasis.
+
+---
+
+Right column body with its own Markdown, including nested lists and code blocks.
+:::
+```
+
+Inside a `:::columns` block, a top-level `---` is a column divider rather than a thematic break or horizontal rule. Each column can contain recursive Markdown bodies, and the layout stacks on narrow screens and print output.
+
 ## Build
 
 ```sh

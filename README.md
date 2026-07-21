@@ -44,7 +44,7 @@ Strong emphasis uses the same amber treatment across dark and light modes with W
 
 `build` accepts `--out <file>` and `--open`. Without `--out`, the HTML is written to the system temp directory. `serve` accepts `--port <port>` (default 5173) and `--open`.
 
-See [the authoring guide](docs/authoring.md) for supported Markdown and [the schema guide](docs/schema.md) for command output.
+See [the authoring guide](docs/authoring.md) for supported Markdown and [the schema guide](docs/schema.md) for command output. The authoring guide also documents `:::columns` blocks for side-by-side authoring.
 
 ## Development
 
