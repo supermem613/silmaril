@@ -164,9 +164,11 @@ function measureNode(node: MermaidNode): { width: number; height: number } {
   const textHeight = node.lines.length * LINE_HEIGHT;
 
   if (node.shape === 'diamond') {
+    const slopedSideWidth = textWidth + (node.lines.length - 1) * LINE_HEIGHT + 16;
+    const size = Math.max(120, Math.min(220, Math.max(slopedSideWidth, textHeight * 2 + 28)));
     return {
-      width: Math.max(120, Math.min(300, textWidth * 1.5 + 40)),
-      height: Math.max(72, textHeight * 2 + 28),
+      width: size,
+      height: size,
     };
   }
   if (node.shape === 'ellipse') {
@@ -322,6 +324,27 @@ function nodeMarkup(placed: PlacedNode): string {
         </g>`;
 }
 
+function boundaryPoint(placed: PlacedNode, towardX: number, towardY: number): { x: number; y: number } {
+  const cx = placed.x + placed.width / 2;
+  const cy = placed.y + placed.height / 2;
+  const dx = towardX - cx;
+  const dy = towardY - cy;
+  if (dx === 0 && dy === 0) {
+    return { x: cx, y: cy };
+  }
+  const rx = placed.width / 2;
+  const ry = placed.height / 2;
+  let scale: number;
+  if (placed.node.shape === 'diamond') {
+    scale = 1 / (Math.abs(dx) / rx + Math.abs(dy) / ry);
+  } else if (placed.node.shape === 'ellipse') {
+    scale = 1 / Math.sqrt((dx * dx) / (rx * rx) + (dy * dy) / (ry * ry));
+  } else {
+    scale = 1 / Math.max(Math.abs(dx) / rx, Math.abs(dy) / ry);
+  }
+  return { x: cx + dx * scale, y: cy + dy * scale };
+}
+
 function anchorPoints(
   from: PlacedNode,
   to: PlacedNode,
@@ -332,13 +355,16 @@ function anchorPoints(
   const toCx = to.x + to.width / 2;
   const toCy = to.y + to.height / 2;
 
-  if (direction === 'LR' && to.x >= from.x + from.width) {
-    return { x1: from.x + from.width, y1: fromCy, x2: to.x, y2: toCy };
+  // Spread exits along the source boundary while keeping arrivals centered on
+  // the target's leading edge. This gives decision branches shallow fan-out
+  // angles and leaves room for a short square approach into each target.
+  const start = boundaryPoint(from, toCx, toCy);
+  if (direction === 'LR') {
+    const targetX = toCx >= fromCx ? to.x : to.x + to.width;
+    return { x1: start.x, y1: start.y, x2: targetX, y2: toCy };
   }
-  if (direction === 'TD' && to.y >= from.y + from.height) {
-    return { x1: fromCx, y1: from.y + from.height, x2: toCx, y2: to.y };
-  }
-  return { x1: fromCx, y1: fromCy, x2: toCx, y2: toCy };
+  const targetY = toCy >= fromCy ? to.y : to.y + to.height;
+  return { x1: start.x, y1: start.y, x2: toCx, y2: targetY };
 }
 
 export function renderMermaidBlock(content: string): string {
@@ -422,24 +448,43 @@ export function renderMermaidBlock(content: string): string {
       const dash = edge.style === 'dotted' ? ' stroke-dasharray="6 5"' : '';
       const thick = edge.style === 'thick' ? ' stroke-width="3"' : '';
       const marker = edge.arrow ? ` marker-end="url(#${markerId})"` : '';
-      // Bow each edge with a single quadratic control point so connectors read as
-      // gentle curves instead of hard polylines. The offset is a capped fraction of
-      // the edge length, kept deterministic so repeated builds hash identically.
+      // Follow Obsidian's edge shape: one long straight segment, one compact
+      // rounded corner, then a short square approach into the target.
       const round = (value: number): number => Math.round(value * 100) / 100;
       const dx = x2 - x1;
       const dy = y2 - y1;
-      const length = Math.hypot(dx, dy);
-      const bow = length === 0 ? 0 : Math.min(length * 0.09, 24);
-      const perpX = length === 0 ? 0 : -dy / length;
-      const perpY = length === 0 ? 0 : dx / length;
-      const cx = round(x1 + dx / 2 + perpX * bow);
-      const cy = round(y1 + dy / 2 + perpY * bow);
-      const path = `<path class="mermaid-edge" d="M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}"${dash}${thick}${marker} />`;
+      const sx = round(x1);
+      const sy = round(y1);
+      const tx = round(x2);
+      const ty = round(y2);
+      let d: string;
+      if (direction === 'LR') {
+        const approach = Math.sign(dx || 1) * Math.min(18, Math.abs(dx) / 3);
+        const cornerX = x2 - approach;
+        const lineDx = cornerX - x1;
+        const lineDy = y2 - y1;
+        const lineLength = Math.hypot(lineDx, lineDy);
+        const trim = Math.min(18, lineLength / 3);
+        const curveX = cornerX - (lineDx / lineLength) * trim;
+        const curveY = y2 - (lineDy / lineLength) * trim;
+        d = `M ${sx} ${sy} L ${round(curveX)} ${round(curveY)} Q ${round(cornerX)} ${ty} ${tx} ${ty}`;
+      } else {
+        const approach = Math.sign(dy || 1) * Math.min(18, Math.abs(dy) / 3);
+        const cornerY = y2 - approach;
+        const lineDx = x2 - x1;
+        const lineDy = cornerY - y1;
+        const lineLength = Math.hypot(lineDx, lineDy);
+        const trim = Math.min(18, lineLength / 3);
+        const curveX = x2 - (lineDx / lineLength) * trim;
+        const curveY = cornerY - (lineDy / lineLength) * trim;
+        d = `M ${sx} ${sy} L ${round(curveX)} ${round(curveY)} Q ${tx} ${round(cornerY)} ${tx} ${ty}`;
+      }
+      const path = `<path class="mermaid-edge" d="${d}"${dash}${thick}${marker} />`;
       if (!edge.label) {
         return path;
       }
-      const mx = round((x1 + x2) / 2 + perpX * bow * 0.5);
-      const my = round((y1 + y2) / 2 + perpY * bow * 0.5);
+      const mx = direction === 'LR' ? round(x2 - Math.sign(dx || 1) * 30) : tx;
+      const my = direction === 'LR' ? ty : round(y2 - Math.sign(dy || 1) * 30);
       const labelWidth = edge.label.length * 6.5 + 10;
       const bg = `<rect class="mermaid-edge-label-bg" x="${mx - labelWidth / 2}" y="${my - 9}" width="${labelWidth}" height="18" rx="4" ry="4" />`;
       const labelText = `<text class="mermaid-edge-label" x="${mx}" y="${my + 1}" text-anchor="middle" dominant-baseline="middle">${escapeHtml(edge.label)}</text>`;
