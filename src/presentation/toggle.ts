@@ -13,8 +13,8 @@ export function engineeringProgressMarkup(): string {
   <div class="engineering-slide-progress" data-slide-progress aria-live="polite" hidden>
     <span data-slide-progress-current>1</span> / <span data-slide-progress-total>1</span>
   </div>
-  <div class="engineering-slide-cue engineering-slide-cue--previous" data-slide-cue-previous aria-hidden="true" hidden>&lsaquo;</div>
-  <div class="engineering-slide-cue engineering-slide-cue--next" data-slide-cue-next aria-hidden="true" hidden>&rsaquo;</div>
+  <button class="engineering-slide-cue engineering-slide-cue--previous" data-slide-cue-previous type="button" aria-label="Previous slide" hidden>&lsaquo;</button>
+  <button class="engineering-slide-cue engineering-slide-cue--next" data-slide-cue-next type="button" aria-label="Next slide" hidden>&rsaquo;</button>
 `;
 }
 
@@ -115,6 +115,26 @@ export const engineeringNavigationScript = `
             document.body.appendChild(cue);
           }
         });
+        var goRelative = function (delta) {
+          if (typeof window.impress !== 'function') {
+            return;
+          }
+          if (delta < 0) {
+            window.impress().prev();
+          } else {
+            window.impress().next();
+          }
+        };
+        if (previousCue) {
+          previousCue.addEventListener('click', function () {
+            goRelative(-1);
+          });
+        }
+        if (nextCue) {
+          nextCue.addEventListener('click', function () {
+            goRelative(1);
+          });
+        }
         var updateProgress = function () {
           if (!progress || !progressCurrent || !progressTotal) {
             return;

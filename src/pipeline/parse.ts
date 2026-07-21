@@ -20,14 +20,23 @@ function parseTitle(markdown: string): string | null {
   return null;
 }
 
-function parseSlides(markdown: string): SlideIR[] {
+export interface SlideRange {
+  readonly id: string;
+  readonly title: string;
+  readonly headingIndex: number;
+  readonly bodyStart: number;
+  readonly contentEnd: number;
+  readonly regionEnd: number;
+}
+
+// Single source of truth for how markdown splits into slides. Both the parsed
+// board and the in-place editor write-back derive slide ids and boundaries from
+// here so a slide id always maps back to the same source region.
+export function slideRanges(markdown: string): SlideRange[] {
   const lines = markdown.split(/\r?\n/);
-  const slides: SlideIR[] = [];
-  const usedIds = new Map<string, number>();
+  const headings: Array<{ index: number; title: string }> = [];
   let inFence = false;
   let fenceCharacter: string | null = null;
-  let currentTitle: string | null = null;
-  let bodyStart = 0;
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
@@ -49,35 +58,38 @@ function parseSlides(markdown: string): SlideIR[] {
     }
 
     const heading = line.match(/^##\s+(.*)$/);
-    if (!heading) {
-      continue;
+    if (heading) {
+      headings.push({ index, title: heading[1].trim() });
     }
-
-    if (currentTitle !== null) {
-      slides.push(createSlide(currentTitle, lines.slice(bodyStart, index), usedIds));
-    }
-
-    currentTitle = heading[1].trim();
-    bodyStart = index + 1;
   }
 
-  if (currentTitle !== null) {
-    slides.push(createSlide(currentTitle, lines.slice(bodyStart), usedIds));
-  }
+  const usedIds = new Map<string, number>();
+  return headings.map((heading, order) => {
+    const baseId = slugify(heading.title || "slide");
+    const count = usedIds.get(baseId) ?? 0;
+    usedIds.set(baseId, count + 1);
+    const id = count === 0 ? baseId : `${baseId}-${count + 1}`;
 
-  return slides;
+    const bodyStart = heading.index + 1;
+    const regionEnd = order + 1 < headings.length ? headings[order + 1].index : lines.length;
+    let contentEnd = bodyStart;
+    for (let index = bodyStart; index < regionEnd; index += 1) {
+      if (lines[index].trim() !== "") {
+        contentEnd = index + 1;
+      }
+    }
+
+    return { id, title: heading.title, headingIndex: heading.index, bodyStart, contentEnd, regionEnd };
+  });
 }
 
-function createSlide(title: string, bodyLines: string[], usedIds: Map<string, number>): SlideIR {
-  const baseId = slugify(title || "slide");
-  const count = usedIds.get(baseId) ?? 0;
-  usedIds.set(baseId, count + 1);
-
-  return {
-    id: count === 0 ? baseId : `${baseId}-${count + 1}`,
-    title,
-    body: bodyLines.join("\n").replace(/\n+$/, ""),
-  };
+function parseSlides(markdown: string): SlideIR[] {
+  const lines = markdown.split(/\r?\n/);
+  return slideRanges(markdown).map((range) => ({
+    id: range.id,
+    title: range.title,
+    body: lines.slice(range.bodyStart, range.regionEnd).join("\n").replace(/\n+$/, ""),
+  }));
 }
 
 function linesOutsideFences(markdown: string): string[] {

@@ -9,6 +9,7 @@ describe("schema", () => {
       ["doctor"],
       ["schema"],
       ["build"],
+      ["serve"],
       ["update"],
     ]);
   });

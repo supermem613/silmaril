@@ -22,9 +22,9 @@ function hashOutput(output: string): string {
 
 export function auditDeterminism(): DeterminismAuditResult {
   const slides = [
-    { id: "overview", title: "Overview", content: "<p>A concise opening.</p>", markdownSource: "A concise opening." },
-    { id: "detail", title: "Detail", content: "<p>A compact detail.</p>", markdownSource: "A compact detail." },
-    { id: "finish", title: "Finish", content: "<p>A closing summary.</p>", markdownSource: "A closing summary." },
+    { id: "overview", title: "Overview", content: "<p>A concise opening.</p>" },
+    { id: "detail", title: "Detail", content: "<p>A compact detail.</p>" },
+    { id: "finish", title: "Finish", content: "<p>A closing summary.</p>" },
   ];
   const firstOutput = buildPresentation(slides, { documentTitle: "Determinism audit" });
   const secondOutput = buildPresentation(slides, { documentTitle: "Determinism audit" });

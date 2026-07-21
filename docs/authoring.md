@@ -59,10 +59,16 @@ node dist/cli.js build talk.md --open
 
 Without `--out`, Silmaril writes `<source-name>.html` to the system temp directory.
 
-## Present and edit
+## Present
 
-The presentation starts on the whole-board overview. Arrow keys move through slides. Focused-slide mode isolates the active slide and shows quiet edge cues when another slide exists in that direction.
+The presentation starts on the whole-board overview. Arrow keys move through slides. Focused-slide mode isolates the active slide and shows quiet edge cues when another slide exists in that direction. The board signature is `silmaril · <version>`.
 
-Open the Markdown editor from the right-edge control drawer. Editing updates the focused slide as a live preview, and the live preview matches the rendered slide. The browser state is temporary; the Markdown file remains the source of truth.
+## Edit with live reload
 
-Use **Export Markdown** to save edits. The native path uses the File System Access API, with a download fallback when it is unavailable. The board signature is `silmaril · <version>`. Strong emphasis uses an amber color with WCAG AA contrast in both display modes.
+```sh
+node dist/cli.js serve talk.md
+node dist/cli.js serve talk.md --port 4000
+node dist/cli.js serve talk.md --open
+```
+
+`serve` (`silmaril serve`) starts a local server with live reload on port 5173 by default. Edit the Markdown in your own editor and the browser reloads on save, so the file stays the source of truth. Rendering is full fidelity, including Mermaid. Strong emphasis uses an amber color with WCAG AA contrast in both display modes.

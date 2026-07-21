@@ -308,11 +308,11 @@ function nodeMarkup(placed: PlacedNode): string {
   let shapeMarkup: string;
   if (node.shape === 'diamond') {
     const points = `${cx},${y} ${x + width},${cy} ${cx},${y + height} ${x},${cy}`;
-    shapeMarkup = `<polygon class="mermaid-node" points="${points}" />`;
+    shapeMarkup = `<polygon class="mermaid-node mermaid-node--diamond" points="${points}" />`;
   } else if (node.shape === 'ellipse') {
-    shapeMarkup = `<ellipse class="mermaid-node" cx="${cx}" cy="${cy}" rx="${width / 2}" ry="${height / 2}" />`;
+    shapeMarkup = `<ellipse class="mermaid-node mermaid-node--ellipse" cx="${cx}" cy="${cy}" rx="${width / 2}" ry="${height / 2}" />`;
   } else {
-    shapeMarkup = `<rect class="mermaid-node" x="${x}" y="${y}" width="${width}" height="${height}" rx="12" ry="12" />`;
+    shapeMarkup = `<rect class="mermaid-node mermaid-node--rect" x="${x}" y="${y}" width="${width}" height="${height}" rx="12" ry="12" />`;
   }
 
   return `
@@ -422,12 +422,24 @@ export function renderMermaidBlock(content: string): string {
       const dash = edge.style === 'dotted' ? ' stroke-dasharray="6 5"' : '';
       const thick = edge.style === 'thick' ? ' stroke-width="3"' : '';
       const marker = edge.arrow ? ` marker-end="url(#${markerId})"` : '';
-      const path = `<path class="mermaid-edge" d="M ${x1} ${y1} L ${x2} ${y2}"${dash}${thick}${marker} />`;
+      // Bow each edge with a single quadratic control point so connectors read as
+      // gentle curves instead of hard polylines. The offset is a capped fraction of
+      // the edge length, kept deterministic so repeated builds hash identically.
+      const round = (value: number): number => Math.round(value * 100) / 100;
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const length = Math.hypot(dx, dy);
+      const bow = length === 0 ? 0 : Math.min(length * 0.09, 24);
+      const perpX = length === 0 ? 0 : -dy / length;
+      const perpY = length === 0 ? 0 : dx / length;
+      const cx = round(x1 + dx / 2 + perpX * bow);
+      const cy = round(y1 + dy / 2 + perpY * bow);
+      const path = `<path class="mermaid-edge" d="M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}"${dash}${thick}${marker} />`;
       if (!edge.label) {
         return path;
       }
-      const mx = (x1 + x2) / 2;
-      const my = (y1 + y2) / 2;
+      const mx = round((x1 + x2) / 2 + perpX * bow * 0.5);
+      const my = round((y1 + y2) / 2 + perpY * bow * 0.5);
       const labelWidth = edge.label.length * 6.5 + 10;
       const bg = `<rect class="mermaid-edge-label-bg" x="${mx - labelWidth / 2}" y="${my - 9}" width="${labelWidth}" height="18" rx="4" ry="4" />`;
       const labelText = `<text class="mermaid-edge-label" x="${mx}" y="${my + 1}" text-anchor="middle" dominant-baseline="middle">${escapeHtml(edge.label)}</text>`;
