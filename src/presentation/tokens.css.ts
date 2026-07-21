@@ -32,9 +32,9 @@ export const engineeringTokensCss = `
     --code-text: var(--dark-code-text);
     --shadow: var(--dark-shadow);
     --strong: var(--dark-strong);
-    --token-mermaid-node-fill: #212D36;
-    --token-mermaid-node-fill-diamond: #362621;
-    --token-mermaid-node-fill-ellipse: #363121;
+    --token-mermaid-node-fill: #326D96;
+    --token-mermaid-node-fill-diamond: #A05235;
+    --token-mermaid-node-fill-ellipse: #786628;
     --token-mermaid-node-text: var(--text);
     --token-mermaid-edge: #8E959E;
     --token-mermaid-label: var(--muted);
@@ -64,9 +64,9 @@ export const engineeringTokensCss = `
     --code-text: var(--light-code-text);
     --shadow: var(--light-shadow);
     --strong: var(--light-strong);
-    --token-mermaid-node-fill: #DEEAF2;
-    --token-mermaid-node-fill-diamond: #F2E4DE;
-    --token-mermaid-node-fill-ellipse: #F2EEDE;
+    --token-mermaid-node-fill: #61A2D1;
+    --token-mermaid-node-fill-diamond: #D58A6E;
+    --token-mermaid-node-fill-ellipse: #D1B961;
     --token-mermaid-node-text: var(--text);
     --token-mermaid-edge: #767D86;
     --token-mermaid-label: var(--muted);

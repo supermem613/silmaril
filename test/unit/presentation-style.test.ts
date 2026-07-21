@@ -97,12 +97,23 @@ test("gives each Mermaid node shape a distinct fill with no border, and gray edg
     assert.ok(fills && fills.length >= 2, `expected dark and light values for --token-mermaid-node-fill${suffix}`);
   }
 
-  const darkFills = ["#212D36", "#362621", "#363121"];
-  const lightFills = ["#DEEAF2", "#F2E4DE", "#F2EEDE"];
+  const darkFills = ["#326D96", "#A05235", "#786628"];
+  const lightFills = ["#61A2D1", "#D58A6E", "#D1B961"];
   assert.equal(new Set(darkFills).size, 3, "expected three distinct dark shape fills");
   assert.equal(new Set(lightFills).size, 3, "expected three distinct light shape fills");
   for (const fill of [...darkFills, ...lightFills]) {
     assert.ok(engineeringTokensCss.includes(fill), `expected the tokens CSS to define the ${fill} shape fill`);
+  }
+
+  // Node labels use var(--text): light on dark theme, dark on light theme.
+  // Each jewel-tone fill must keep that label at WCAG AA (>= 4.5).
+  const darkText = engineeringTokensCss.match(/--dark-text:\s*(#[0-9a-f]{6})/i)?.[1] ?? "#F3F7F6";
+  const lightText = engineeringTokensCss.match(/--light-text:\s*(#[0-9a-f]{6})/i)?.[1] ?? "#111820";
+  for (const fill of darkFills) {
+    assert.ok(contrastRatio(darkText, fill) >= 4.5, `expected dark label to meet AA on ${fill}`);
+  }
+  for (const fill of lightFills) {
+    assert.ok(contrastRatio(lightText, fill) >= 4.5, `expected light label to meet AA on ${fill}`);
   }
 
   // Edges read as neutral gray connectors, not accent-colored.
