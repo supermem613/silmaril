@@ -1,3 +1,7 @@
+import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import {
   FileSystemAdapter,
   ItemView,
@@ -11,6 +15,7 @@ import {
   RenderScheduler,
   TimerSurface,
 } from './renderScheduler.js';
+import { createPreviewTransport } from './previewTransport.js';
 
 export const SILMARIL_VIEW_TYPE = 'silmaril-preview';
 
@@ -26,9 +31,13 @@ interface RenderResult {
 
 export class SilmarilDeckView extends ItemView {
   private iframe: HTMLIFrameElement | null = null;
-  private objectUrl: string | null = null;
   private hasFocusedInitialDeck = false;
   private nextRequestId = 0;
+  private readonly previewTransport = createPreviewTransport({
+    directory: path.join(tmpdir(), 'silmaril-obsidian-preview'),
+    fileSystem: { mkdir, rm, writeFile },
+    toFileUrl: (filePath) => pathToFileURL(filePath).href,
+  });
   private readonly scheduler: RenderScheduler<RenderRequest, RenderResult>;
 
   constructor(
@@ -67,7 +76,11 @@ export class SilmarilDeckView extends ItemView {
           html: rendered.html,
         });
       },
-      applyResult: (result) => this.showDeck(result.html),
+      applyResult: (result) => {
+        void this.showDeck(result.html).catch((error: unknown) => {
+          new Notice(`Silmaril preview failed: ${this.errorMessage(error)}`);
+        });
+      },
     });
   }
 
@@ -91,7 +104,7 @@ export class SilmarilDeckView extends ItemView {
     const iframe = document.createElement('iframe');
     iframe.className = 'silmaril-preview__frame';
     iframe.title = 'Silmaril presentation preview';
-    // This grants scripts and same-origin access only to our trusted self-generated Blob deck.
+    // This grants scripts and same-origin access only to our trusted, self-generated deck.
     iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
     this.contentEl.append(iframe);
     this.iframe = iframe;
@@ -112,8 +125,8 @@ export class SilmarilDeckView extends ItemView {
 
   protected async onClose(): Promise<void> {
     this.scheduler.dispose();
-    this.revokeObjectUrl();
     this.iframe = null;
+    await this.previewTransport.dispose();
     this.contentEl.replaceChildren();
   }
 
@@ -130,17 +143,19 @@ export class SilmarilDeckView extends ItemView {
     });
   }
 
-  private showDeck(html: string): void {
-    if (this.iframe === null) {
+  private async showDeck(html: string): Promise<void> {
+    const iframe = this.iframe;
+    if (iframe === null) {
       return;
     }
 
-    this.revokeObjectUrl();
-    this.objectUrl = URL.createObjectURL(
-      new Blob([html], { type: 'text/html;charset=utf-8' }),
-    );
+    const sourceUrl = await this.previewTransport.publish(html);
+    if (this.iframe !== iframe) {
+      return;
+    }
+
     if (!this.hasFocusedInitialDeck) {
-      this.iframe.addEventListener(
+      iframe.addEventListener(
         'load',
         () => {
           this.iframe?.focus();
@@ -149,7 +164,7 @@ export class SilmarilDeckView extends ItemView {
         { once: true },
       );
     }
-    this.iframe.src = this.objectUrl;
+    iframe.src = sourceUrl;
   }
 
   private getSourcePath(view: MarkdownView): string {
@@ -161,15 +176,6 @@ export class SilmarilDeckView extends ItemView {
     }
 
     return this.app.vault.adapter.getFullPath(view.file.path);
-  }
-
-  private revokeObjectUrl(): void {
-    if (this.objectUrl === null) {
-      return;
-    }
-
-    URL.revokeObjectURL(this.objectUrl);
-    this.objectUrl = null;
   }
 
   private errorMessage(error: unknown): string {

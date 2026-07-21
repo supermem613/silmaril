@@ -29,13 +29,17 @@ const requiredMarkers = [
   'addRibbonIcon',
   'onload',
   'onunload',
-  'createObjectURL',
   'allow-scripts allow-same-origin',
-  'revokeObjectURL',
+  'pathToFileURL',
+  'writeFile',
 ];
 
 for (const marker of requiredMarkers) {
   assert.ok(bundle.includes(marker), `main.js is missing ${marker}`);
+}
+
+for (const marker of ['createObjectURL', 'revokeObjectURL']) {
+  assert.ok(!bundle.includes(marker), `main.js must not retain ${marker}`);
 }
 
 assert.ok(!bundle.includes('import.meta.url'), 'main.js must not retain import.meta.url');
