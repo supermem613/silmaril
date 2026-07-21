@@ -1,5 +1,6 @@
 import MarkdownIt from "markdown-it";
 import hljs from "highlight.js";
+import { parseMarkdownSegments } from "./columns.js";
 import { renderMermaidBlock } from "./mermaid.js";
 
 const DEFAULT_RENDERER_OPTIONS = {
@@ -89,6 +90,21 @@ function renderCodeBlock(content: string, language: string): string {
   }
 }
 
+function renderSegments(markdown: string, renderer: MarkdownIt): string {
+  return parseMarkdownSegments(markdown)
+    .map((segment) => {
+      if (segment.type === "columns") {
+        const columns = segment.content
+          .map((columnBody) => `<div class="column">${renderSegments(columnBody, renderer)}</div>`)
+          .join("");
+        return `<div class="columns">${columns}</div>`;
+      }
+
+      return renderer.render(segment.content);
+    })
+    .join("");
+}
+
 export function renderMarkdown(markdown: string): string {
-  return createMarkdownRenderer().render(markdown);
+  return renderSegments(markdown, createMarkdownRenderer());
 }
