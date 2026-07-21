@@ -606,6 +606,22 @@ export const engineeringTokensCss = `
     margin: 0.1rem 0 0.3rem;
   }
 
+  .columns {
+    display: flex;
+    gap: 1.25rem;
+  }
+
+  .columns > .column {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  @media (max-width: 768px), print {
+    .columns {
+      flex-direction: column;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .engineering-toggle,
     .engineering-card {
