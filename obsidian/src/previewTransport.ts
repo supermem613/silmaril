@@ -14,15 +14,17 @@ interface PreviewFileSystem {
 interface PreviewTransportOptions {
   readonly directory: string;
   readonly fileSystem: PreviewFileSystem;
-  readonly toFileUrl: (filePath: string) => string;
+  readonly joinPath?: (directory: string, fileName: string) => string;
+  readonly toResourceUrl: (filePath: string) => string;
 }
 
 export function createPreviewTransport({
   directory,
   fileSystem,
-  toFileUrl,
+  joinPath = path.join,
+  toResourceUrl,
 }: PreviewTransportOptions) {
-  const filePath = path.join(directory, `${randomUUID()}.html`);
+  const filePath = joinPath(directory, `${randomUUID()}.html`);
   let revision = 0;
   let pending: Promise<void> = Promise.resolve();
   let published = false;
@@ -43,7 +45,9 @@ export function createPreviewTransport({
         await fileSystem.writeFile(filePath, html, { encoding: 'utf8' });
         published = true;
         revision += 1;
-        return `${toFileUrl(filePath)}?revision=${revision}`;
+        const resourceUrl = toResourceUrl(filePath);
+        const separator = resourceUrl.includes('?') ? '&' : '?';
+        return `${resourceUrl}${separator}revision=${revision}`;
       });
     },
     dispose() {

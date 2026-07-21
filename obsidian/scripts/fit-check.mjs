@@ -84,6 +84,9 @@ async function securityDecision() {
     assert.ok(/allow-scripts[\s\S]{0,80}allow-same-origin/.test(text));
     assert.ok(/trusted.*self-generated/i.test(text));
   }
+  assert.ok(view.includes('getResourcePath'));
+  assert.ok(!view.includes('pathToFileURL'));
+  assert.ok(readme.includes('Obsidian resource URL'));
   assert.ok(readme.includes('file://'));
 }
 

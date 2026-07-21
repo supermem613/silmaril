@@ -41,8 +41,10 @@ editor and updates after the file saves.
 ## Security decision
 
 The preview writes the generated deck to a managed local file and loads its
-`file://` URL in an iframe with `sandbox="allow-scripts allow-same-origin"`.
-This combination is acceptable here only because the frame hosts Silmaril's own
+Obsidian resource URL in an iframe with
+`sandbox="allow-scripts allow-same-origin"`. Direct `file://` navigation is not
+used because the Obsidian app host does not load it. This combination is
+acceptable here only because the frame hosts Silmaril's own
 trusted, self-generated deck. It must not host untrusted remote content. The
 plugin removes the managed file when the preview closes.
 

@@ -15,6 +15,7 @@ const required = [
   'allow-scripts',
   'allow-same-origin',
   'trusted, self-generated deck',
+  'Obsidian resource URL',
   'file://',
   'dedicated repository',
   'MIT LICENSE',

@@ -1,7 +1,3 @@
-import { mkdir, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import {
   FileSystemAdapter,
   ItemView,
@@ -33,11 +29,7 @@ export class SilmarilDeckView extends ItemView {
   private iframe: HTMLIFrameElement | null = null;
   private hasFocusedInitialDeck = false;
   private nextRequestId = 0;
-  private readonly previewTransport = createPreviewTransport({
-    directory: path.join(tmpdir(), 'silmaril-obsidian-preview'),
-    fileSystem: { mkdir, rm, writeFile },
-    toFileUrl: (filePath) => pathToFileURL(filePath).href,
-  });
+  private readonly previewTransport: ReturnType<typeof createPreviewTransport>;
   private readonly scheduler: RenderScheduler<RenderRequest, RenderResult>;
 
   constructor(
@@ -45,6 +37,28 @@ export class SilmarilDeckView extends ItemView {
     private readonly getSourceView: () => MarkdownView | null,
   ) {
     super(leaf);
+
+    const adapter = this.getFileSystemAdapter();
+    this.previewTransport = createPreviewTransport({
+      directory: `${this.app.vault.configDir}/plugins/silmaril-obsidian`,
+      fileSystem: {
+        mkdir: async (directory) => {
+          if (!(await adapter.exists(directory))) {
+            await adapter.mkdir(directory);
+          }
+        },
+        rm: async (filePath) => {
+          if (await adapter.exists(filePath)) {
+            await adapter.remove(filePath);
+          }
+        },
+        writeFile: async (filePath, content) => {
+          await adapter.write(filePath, content);
+        },
+      },
+      joinPath: (directory, fileName) => `${directory}/${fileName}`,
+      toResourceUrl: (filePath) => adapter.getResourcePath(filePath),
+    });
 
     const timer: TimerSurface = {
       schedule: (callback, delayMs) =>
@@ -171,11 +185,16 @@ export class SilmarilDeckView extends ItemView {
     if (view.file === null) {
       throw new Error('The active Markdown editor is not backed by a vault file.');
     }
+
+    return this.getFileSystemAdapter().getFullPath(view.file.path);
+  }
+
+  private getFileSystemAdapter(): FileSystemAdapter {
     if (!(this.app.vault.adapter instanceof FileSystemAdapter)) {
       throw new Error('Silmaril preview requires a desktop file-system vault.');
     }
 
-    return this.app.vault.adapter.getFullPath(view.file.path);
+    return this.app.vault.adapter;
   }
 
   private errorMessage(error: unknown): string {

@@ -30,15 +30,15 @@ const requiredMarkers = [
   'onload',
   'onunload',
   'allow-scripts allow-same-origin',
-  'pathToFileURL',
-  'writeFile',
+  'base64',
+  'getResourcePath',
 ];
 
 for (const marker of requiredMarkers) {
   assert.ok(bundle.includes(marker), `main.js is missing ${marker}`);
 }
 
-for (const marker of ['createObjectURL', 'revokeObjectURL']) {
+for (const marker of ['createObjectURL', 'revokeObjectURL', 'pathToFileURL']) {
   assert.ok(!bundle.includes(marker), `main.js must not retain ${marker}`);
 }
 

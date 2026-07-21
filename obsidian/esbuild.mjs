@@ -31,16 +31,20 @@ const embedImpressScript = {
       if (!source.includes(impressReadExpression)) {
         throw new Error('Silmaril presentation asset read expression changed.');
       }
+      const encodedImpressScript = Buffer.from(impressScript, 'utf8').toString('base64');
 
       return {
-        contents: source.replace(impressReadExpression, JSON.stringify(impressScript)),
+        contents: source.replace(
+          impressReadExpression,
+          `Buffer.from(${JSON.stringify(encodedImpressScript)}, "base64").toString("utf8")`,
+        ),
         loader: 'ts',
       };
     });
   },
 };
 
-const result = await build({
+const mainResult = await build({
   absWorkingDir: rootDir,
   entryPoints: [path.join(rootDir, 'src', 'main.ts')],
   outfile: path.join(rootDir, 'main.js'),
@@ -55,6 +59,22 @@ const result = await build({
   logLevel: 'info',
 });
 
-if (result.warnings.length > 0) {
-  throw new Error(`Plugin bundle completed with ${result.warnings.length} warning(s).`);
+const adapterResult = await build({
+  absWorkingDir: rootDir,
+  entryPoints: [path.join(rootDir, 'src', 'renderAdapter.ts')],
+  outfile: path.join(rootDir, '.build', 'renderAdapter.mjs'),
+  bundle: true,
+  platform: 'node',
+  format: 'esm',
+  target: ['es2022'],
+  external: externals,
+  nodePaths: [path.join(rootDir, 'node_modules')],
+  plugins: [embedImpressScript],
+  sourcemap: false,
+  logLevel: 'silent',
+});
+
+const warningCount = mainResult.warnings.length + adapterResult.warnings.length;
+if (warningCount > 0) {
+  throw new Error(`Plugin bundle completed with ${warningCount} warning(s).`);
 }
