@@ -32,8 +32,10 @@ test("router flowchart parses shapes, edge labels, and dotted edges", () => {
   // Rhombus keeps <br/> as two lines rendered via tspans.
   assert.match(first, /<tspan[^>]*>Lean Router<\/tspan>/);
   assert.match(first, /<tspan[^>]*>~1 screen<\/tspan>/);
-  // Decision node renders as a diamond polygon.
-  assert.match(first, /<polygon class="mermaid-node"/);
+  // Decision node renders as a diamond polygon with a shape-specific class.
+  assert.match(first, /<polygon class="mermaid-node mermaid-node--diamond"/);
+  // Process nodes carry a rect shape class distinct from the diamond.
+  assert.match(first, /<rect class="mermaid-node mermaid-node--rect"/);
   // Arrowheads are filled markers, not stroked chevrons.
   assert.match(first, /<path class="mermaid-arrowhead"/);
   // Edge labels are rendered.

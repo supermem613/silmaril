@@ -75,6 +75,44 @@ test("styles the engineering board with amber strong emphasis at accessible cont
   assert.ok(contrastRatio(lightStrong, "#FFFFFF") >= 4.5, `expected --light-strong ${lightStrong} to meet WCAG AA contrast on the light surface`);
 });
 
+test("gives each Mermaid node shape a distinct fill with no border, and gray edges", () => {
+  const rectRule = extractCssRule(engineeringTokensCss, ".engineering-mermaid .mermaid-node");
+  const diamondRule = extractCssRule(engineeringTokensCss, ".engineering-mermaid .mermaid-node--diamond");
+  const ellipseRule = extractCssRule(engineeringTokensCss, ".engineering-mermaid .mermaid-node--ellipse");
+  assert.ok(rectRule, "expected a base mermaid node rule");
+  assert.ok(diamondRule, "expected a diamond mermaid node rule");
+  assert.ok(ellipseRule, "expected an ellipse mermaid node rule");
+  assert.match(rectRule ?? "", /fill:\s*var\(--token-mermaid-node-fill\)/i);
+  assert.match(rectRule ?? "", /stroke:\s*none/i, "expected nodes to render without a border");
+  assert.match(diamondRule ?? "", /fill:\s*var\(--token-mermaid-node-fill-diamond\)/i);
+  assert.doesNotMatch(diamondRule ?? "", /stroke:/i, "expected the diamond to carry no border");
+  assert.match(ellipseRule ?? "", /fill:\s*var\(--token-mermaid-node-fill-ellipse\)/i);
+  assert.doesNotMatch(ellipseRule ?? "", /stroke:/i, "expected the ellipse to carry no border");
+
+  assert.doesNotMatch(engineeringTokensCss, /--token-mermaid-node-stroke/i, "expected per-shape border tokens to be gone");
+
+  for (const suffix of ["", "-diamond", "-ellipse"]) {
+    const fills = engineeringTokensCss.match(new RegExp(`--token-mermaid-node-fill${suffix}:\\s*(#[0-9a-f]{6})`, "gi"));
+    assert.ok(fills && fills.length >= 2, `expected dark and light values for --token-mermaid-node-fill${suffix}`);
+  }
+
+  const darkFills = ["#212D36", "#362621", "#363121"];
+  const lightFills = ["#DEEAF2", "#F2E4DE", "#F2EEDE"];
+  assert.equal(new Set(darkFills).size, 3, "expected three distinct dark shape fills");
+  assert.equal(new Set(lightFills).size, 3, "expected three distinct light shape fills");
+  for (const fill of [...darkFills, ...lightFills]) {
+    assert.ok(engineeringTokensCss.includes(fill), `expected the tokens CSS to define the ${fill} shape fill`);
+  }
+
+  // Edges read as neutral gray connectors, not accent-colored.
+  const darkEdge = engineeringTokensCss.match(/--token-mermaid-edge:\s*(#[0-9a-f]{6})/i)?.[1];
+  assert.ok(darkEdge, "expected a gray dark edge token");
+  const [er, eg, eb] = [1, 3, 5].map((i) => parseInt((darkEdge ?? "#000000").slice(i, i + 2), 16));
+  const maxChannel = Math.max(er, eg, eb);
+  const minChannel = Math.min(er, eg, eb);
+  assert.ok(maxChannel - minChannel <= 24, `expected a near-neutral gray edge but got ${darkEdge}`);
+});
+
 test("keeps focused-slide navigation chrome anchored to the viewport", () => {
   const slideProgressRule = extractCssRule(engineeringTokensCss, ".engineering-slide-progress");
   assert.ok(slideProgressRule, "expected a focused-slide progress CSS rule");

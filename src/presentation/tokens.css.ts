@@ -32,10 +32,11 @@ export const engineeringTokensCss = `
     --code-text: var(--dark-code-text);
     --shadow: var(--dark-shadow);
     --strong: var(--dark-strong);
-    --token-mermaid-node-fill: #13384B;
-    --token-mermaid-node-stroke: var(--accent);
+    --token-mermaid-node-fill: #212D36;
+    --token-mermaid-node-fill-diamond: #362621;
+    --token-mermaid-node-fill-ellipse: #363121;
     --token-mermaid-node-text: var(--text);
-    --token-mermaid-edge: var(--accent-strong);
+    --token-mermaid-edge: #8E959E;
     --token-mermaid-label: var(--muted);
   }
 
@@ -63,10 +64,11 @@ export const engineeringTokensCss = `
     --code-text: var(--light-code-text);
     --shadow: var(--light-shadow);
     --strong: var(--light-strong);
-    --token-mermaid-node-fill: #DFE9EF;
-    --token-mermaid-node-stroke: var(--accent);
+    --token-mermaid-node-fill: #DEEAF2;
+    --token-mermaid-node-fill-diamond: #F2E4DE;
+    --token-mermaid-node-fill-ellipse: #F2EEDE;
     --token-mermaid-node-text: var(--text);
-    --token-mermaid-edge: var(--accent);
+    --token-mermaid-edge: #767D86;
     --token-mermaid-label: var(--muted);
     background: var(--light-bg);
   }
@@ -169,8 +171,15 @@ export const engineeringTokensCss = `
 
   .engineering-mermaid .mermaid-node {
     fill: var(--token-mermaid-node-fill);
-    stroke: var(--token-mermaid-node-stroke);
-    stroke-width: 1.5;
+    stroke: none;
+  }
+
+  .engineering-mermaid .mermaid-node--diamond {
+    fill: var(--token-mermaid-node-fill-diamond);
+  }
+
+  .engineering-mermaid .mermaid-node--ellipse {
+    fill: var(--token-mermaid-node-fill-ellipse);
   }
 
   .engineering-mermaid .mermaid-node-text {
