@@ -1,0 +1,9 @@
+{
+  "id": "silmaril-obsidian",
+  "name": "Silmaril",
+  "version": "0.1.0",
+  "minAppVersion": "1.7.2",
+  "description": "Live-preview Silmaril presentations from Markdown in Obsidian.",
+  "author": "Marcus Markiewicz",
+  "isDesktopOnly": true
+}

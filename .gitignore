@@ -3,3 +3,6 @@ dist/
 .silmaril/
 *.tgz
 *.log
+obsidian/main.js
+obsidian/worker.js
+obsidian/.build/
