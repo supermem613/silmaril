@@ -41,7 +41,7 @@ Use **Export Markdown** to save the edited deck. Silmaril uses the File System A
 
 `build` accepts `--out <file>` and `--open`. Without `--out`, the HTML is written to the system temp directory.
 
-See [the authoring guide](docs/authoring.md) for supported Markdown and [the schema guide](docs/schema.md) for command output.
+See [the authoring guide](docs/authoring.md) for supported Markdown and [the schema guide](docs/schema.md) for command output. The authoring guide also documents `:::columns` blocks for side-by-side authoring.
 
 ## Development
 
