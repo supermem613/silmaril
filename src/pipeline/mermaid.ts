@@ -184,15 +184,61 @@ function measureNode(node: MermaidNode): { width: number; height: number } {
 }
 
 function computeRanks(nodeOrder: string[], edges: MermaidEdge[]): Map<string, number> {
+  // Back-edge detection uses the DFS recursion stack to spot a target node that is still active.
+  // Those edges are excluded from longest-path rank relaxation so a cycle does not inflate the main-axis rank count.
+  // They still remain in the rendered edge list so the loop arrow is drawn.
   const rank = new Map<string, number>();
   for (const id of nodeOrder) {
     rank.set(id, 0);
   }
-  // Longest-path ranking. The pass count is bounded by node count so a cyclic
-  // graph settles instead of looping forever.
+
+  const nodeSet = new Set(nodeOrder);
+  const adjacency = new Map<string, MermaidEdge[]>();
+  for (const edge of edges) {
+    if (!nodeSet.has(edge.from)) {
+      continue;
+    }
+    const list = adjacency.get(edge.from) ?? [];
+    list.push(edge);
+    adjacency.set(edge.from, list);
+  }
+
+  const visited = new Set<string>();
+  const onStack = new Set<string>();
+  const backEdgeKeys = new Set<string>();
+
+  const visit = (id: string): void => {
+    visited.add(id);
+    onStack.add(id);
+
+    for (const edge of adjacency.get(id) ?? []) {
+      const edgeKey = `${edge.from}\u0000${edge.to}`;
+      if (onStack.has(edge.to)) {
+        backEdgeKeys.add(edgeKey);
+        continue;
+      }
+      if (nodeSet.has(edge.to) && !visited.has(edge.to)) {
+        visit(edge.to);
+      }
+    }
+
+    onStack.delete(id);
+  };
+
+  for (const id of nodeOrder) {
+    if (!visited.has(id)) {
+      visit(id);
+    }
+  }
+
+  const rankedEdges = edges.filter((edge) => {
+    const edgeKey = `${edge.from}\u0000${edge.to}`;
+    return !backEdgeKeys.has(edgeKey);
+  });
+
   for (let pass = 0; pass < nodeOrder.length; pass += 1) {
     let changed = false;
-    for (const edge of edges) {
+    for (const edge of rankedEdges) {
       const fromRank = rank.get(edge.from) ?? 0;
       const toRank = rank.get(edge.to) ?? 0;
       if (toRank < fromRank + 1) {
