@@ -1,0 +1,33 @@
+name: Obsidian plugin release
+
+on:
+  push:
+    tags:
+      - "obsidian-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: obsidian/package.json
+      - name: Install plugin dependencies
+        run: npm install --prefix obsidian --no-package-lock
+      - name: Verify plugin release tag
+        run: node obsidian/scripts/verify-manifest.mjs "${{ github.ref_name }}"
+      - name: Build plugin
+        run: npm run build --prefix obsidian
+      - name: Upload plugin release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            obsidian/main.js
+            obsidian/manifest.json
+            obsidian/styles.css

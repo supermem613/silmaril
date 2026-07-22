@@ -1,0 +1,20 @@
+{
+  "name": "obsidian-plugin",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "test:preview": "node --test test/previewTransport.test.mjs"
+  },
+  "dependencies": {
+    "highlight.js": "11.11.1",
+    "markdown-it": "14.3.0"
+  },
+  "devDependencies": {
+    "builtin-modules": "5.0.0",
+    "esbuild": "0.25.0",
+    "obsidian": "1.7.2",
+    "playwright": "1.61.1",
+    "typescript": "5.9.3"
+  }
+}
