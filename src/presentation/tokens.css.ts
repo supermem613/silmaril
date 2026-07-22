@@ -38,6 +38,9 @@ export const engineeringTokensCss = `
     --token-mermaid-node-text: var(--text);
     --token-mermaid-edge: #8E959E;
     --token-mermaid-label: var(--muted);
+    --token-mermaid-subgraph-fill: rgba(142, 149, 158, 0.08);
+    --token-mermaid-subgraph-stroke: #5A616B;
+    --token-mermaid-subgraph-label: var(--muted);
   }
 
   html,
@@ -70,6 +73,9 @@ export const engineeringTokensCss = `
     --token-mermaid-node-text: var(--text);
     --token-mermaid-edge: #767D86;
     --token-mermaid-label: var(--muted);
+    --token-mermaid-subgraph-fill: rgba(118, 125, 134, 0.06);
+    --token-mermaid-subgraph-stroke: #A9B0BA;
+    --token-mermaid-subgraph-label: var(--muted);
     background: var(--light-bg);
   }
 
@@ -169,6 +175,20 @@ export const engineeringTokensCss = `
     min-height: 0;
     max-height: 520px;
     margin: 0.25rem 0;
+  }
+
+  .engineering-mermaid .mermaid-subgraph {
+    fill: var(--token-mermaid-subgraph-fill);
+    stroke: var(--token-mermaid-subgraph-stroke);
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+  }
+
+  .engineering-mermaid .mermaid-subgraph-label {
+    fill: var(--token-mermaid-subgraph-label);
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
   }
 
   .engineering-mermaid .mermaid-node {
