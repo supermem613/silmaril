@@ -23,12 +23,15 @@ interface RenderRequest {
 interface RenderResult {
   readonly requestId: number;
   readonly html: string;
+  readonly view: MarkdownView;
 }
 
 export class SilmarilDeckView extends ItemView {
   private iframe: HTMLIFrameElement | null = null;
   private hasFocusedInitialDeck = false;
   private nextRequestId = 0;
+  private lastRenderedSourceView: MarkdownView | null = null;
+  private latestRenderRequest: RenderRequest | null = null;
   private readonly previewTransport: ReturnType<typeof createPreviewTransport>;
   private readonly scheduler: RenderScheduler<RenderRequest, RenderResult>;
 
@@ -81,19 +84,45 @@ export class SilmarilDeckView extends ItemView {
       debounceMs: 250,
       getRequestId: (request) => request.requestId,
       getResultRequestId: (result) => result.requestId,
-      saveBeforeRender: async (request) => request.view.save(),
+      saveBeforeRender: async (request) => {
+        try {
+          await request.view.save();
+        } catch (error: unknown) {
+          this.invalidateFailedRequest(request);
+          throw error;
+        }
+      },
       render: (request) => {
-        const sourcePath = this.getSourcePath(request.view);
-        const rendered = renderDeck(request.view.editor.getValue(), sourcePath);
-        this.scheduler.complete({
-          requestId: request.requestId,
-          html: rendered.html,
-        });
+        try {
+          const sourcePath = this.getSourcePath(request.view);
+          const rendered = renderDeck(request.view.editor.getValue(), sourcePath);
+          this.scheduler.complete({
+            requestId: request.requestId,
+            html: rendered.html,
+            view: request.view,
+          });
+        } catch (error: unknown) {
+          this.invalidateFailedRequest(request);
+          throw error;
+        }
       },
       applyResult: (result) => {
-        void this.showDeck(result.html).catch((error: unknown) => {
-          new Notice(`Silmaril preview failed: ${this.errorMessage(error)}`);
-        });
+        void this.showDeck(result.html)
+          .then((didNavigate) => {
+            if (!didNavigate) {
+              this.invalidateFailedRequest(result);
+              return;
+            }
+            if (this.latestRenderRequest?.requestId !== result.requestId) {
+              return;
+            }
+            this.lastRenderedSourceView = result.view;
+            this.latestRenderRequest = null;
+          })
+          .catch((error: unknown) => {
+            this.invalidateFailedRequest(result);
+            new Notice(`Silmaril preview failed: ${this.errorMessage(error)}`);
+          });
       },
     });
   }
@@ -126,7 +155,7 @@ export class SilmarilDeckView extends ItemView {
     this.registerEvent(
       this.app.workspace.on('editor-change', (_editor, info) => {
         if (info === this.getSourceView()) {
-          this.enqueueActiveView();
+          this.enqueueActiveView(true);
         }
       }),
     );
@@ -134,7 +163,7 @@ export class SilmarilDeckView extends ItemView {
       this.app.workspace.on('active-leaf-change', () => this.enqueueActiveView()),
     );
 
-    this.enqueueActiveView();
+    this.enqueueActiveView(true);
   }
 
   protected async onClose(): Promise<void> {
@@ -144,28 +173,34 @@ export class SilmarilDeckView extends ItemView {
     this.contentEl.replaceChildren();
   }
 
-  private enqueueActiveView(): void {
+  private enqueueActiveView(force = false): void {
     const view = this.getSourceView();
     if (view === null) {
       return;
     }
 
-    this.nextRequestId += 1;
-    this.scheduler.enqueue({
-      requestId: this.nextRequestId,
+    if (!force && view === this.lastRenderedSourceView) {
+      return;
+    }
+
+    const request = {
+      requestId: this.nextRequestId + 1,
       view,
-    });
+    };
+    this.nextRequestId = request.requestId;
+    this.latestRenderRequest = request;
+    this.scheduler.enqueue(request);
   }
 
-  private async showDeck(html: string): Promise<void> {
+  private async showDeck(html: string): Promise<boolean> {
     const iframe = this.iframe;
     if (iframe === null) {
-      return;
+      return false;
     }
 
     const sourceUrl = await this.previewTransport.publish(html);
     if (this.iframe !== iframe) {
-      return;
+      return false;
     }
 
     if (!this.hasFocusedInitialDeck) {
@@ -179,6 +214,18 @@ export class SilmarilDeckView extends ItemView {
       );
     }
     iframe.src = sourceUrl;
+    return true;
+  }
+
+  private invalidateFailedRequest(request: RenderRequest): void {
+    if (this.latestRenderRequest?.requestId !== request.requestId) {
+      return;
+    }
+
+    this.latestRenderRequest = null;
+    if (this.lastRenderedSourceView === request.view) {
+      this.lastRenderedSourceView = null;
+    }
   }
 
   private getSourcePath(view: MarkdownView): string {
