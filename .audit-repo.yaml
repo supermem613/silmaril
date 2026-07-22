@@ -1,0 +1,21 @@
+name: silmaril
+
+# The CLI command surface is declared once in the registry. Every command spec
+# carries a `path: ["<name>"]`, so that is the canonical capability list.
+source_of_truth:
+  file: src/registry.ts
+  extractor: regex
+  pattern: 'path:\s*\["([a-z]+)"\]'
+  # README leads with the two primary authoring commands, then the utilities.
+  # Adopt that deliberate human order as canonical rather than A-Z or source order.
+  sort: custom
+  custom_order: [build, serve, doctor, schema, update]
+
+targets:
+  - file: README.md
+    section: { heading: "Commands" }
+    match: table_row
+
+  - file: docs/schema.md
+    section: whole_file
+    match: word

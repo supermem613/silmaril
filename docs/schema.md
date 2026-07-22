@@ -36,6 +36,7 @@ The success envelope contains:
 
 - `doctor [--json]`
 - `schema [path...] [--summary]`
+- `serve <input> [--port <port>] [--open]`
 - `update [--json]`
 
 Every command uses exit code `0` for success and `1` for failure. Machine-readable commands write JSON to standard output.
