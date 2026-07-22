@@ -29,6 +29,7 @@ interface RenderResult {
 export class SilmarilDeckView extends ItemView {
   private iframe: HTMLIFrameElement | null = null;
   private hasFocusedInitialDeck = false;
+  private hasNavigatedDeck = false;
   private nextRequestId = 0;
   private lastRenderedSourceView: MarkdownView | null = null;
   private latestRenderRequest: RenderRequest | null = null;
@@ -143,12 +144,9 @@ export class SilmarilDeckView extends ItemView {
     this.contentEl.replaceChildren();
     this.contentEl.classList.add('silmaril-preview');
     this.hasFocusedInitialDeck = false;
+    this.hasNavigatedDeck = false;
 
-    const iframe = document.createElement('iframe');
-    iframe.className = 'silmaril-preview__frame';
-    iframe.title = 'Silmaril presentation preview';
-    // This grants scripts and same-origin access only to our trusted, self-generated deck.
-    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+    const iframe = this.createIframe();
     this.contentEl.append(iframe);
     this.iframe = iframe;
 
@@ -169,6 +167,7 @@ export class SilmarilDeckView extends ItemView {
   protected async onClose(): Promise<void> {
     this.scheduler.dispose();
     this.iframe = null;
+    this.hasNavigatedDeck = false;
     await this.previewTransport.dispose();
     this.contentEl.replaceChildren();
   }
@@ -193,14 +192,22 @@ export class SilmarilDeckView extends ItemView {
   }
 
   private async showDeck(html: string): Promise<boolean> {
-    const iframe = this.iframe;
-    if (iframe === null) {
+    const currentIframe = this.iframe;
+    if (currentIframe === null) {
       return false;
     }
 
     const sourceUrl = await this.previewTransport.publish(html);
-    if (this.iframe !== iframe) {
+    if (this.iframe !== currentIframe) {
       return false;
+    }
+
+    let iframe = currentIframe;
+    if (this.hasNavigatedDeck) {
+      // Obsidian app resource URLs only reload reliably on a fresh iframe.
+      iframe = this.createIframe();
+      currentIframe.replaceWith(iframe);
+      this.iframe = iframe;
     }
 
     if (!this.hasFocusedInitialDeck) {
@@ -214,7 +221,17 @@ export class SilmarilDeckView extends ItemView {
       );
     }
     iframe.src = sourceUrl;
+    this.hasNavigatedDeck = true;
     return true;
+  }
+
+  private createIframe(): HTMLIFrameElement {
+    const iframe = document.createElement('iframe');
+    iframe.className = 'silmaril-preview__frame';
+    iframe.title = 'Silmaril presentation preview';
+    // This grants scripts and same-origin access only to our trusted, self-generated deck.
+    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+    return iframe;
   }
 
   private invalidateFailedRequest(request: RenderRequest): void {

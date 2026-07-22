@@ -49,7 +49,9 @@ Obsidian resource URL in an iframe with
 used because the Obsidian app host does not load it. This combination is
 acceptable here only because the frame hosts Silmaril's own
 trusted, self-generated deck. It must not host untrusted remote content. The
-plugin removes the managed file when the preview closes.
+plugin replaces the iframe before each refresh because Obsidian does not
+reliably navigate one iframe to a second local resource URL. It removes the
+managed file when the preview closes.
 
 ## Community submission
 

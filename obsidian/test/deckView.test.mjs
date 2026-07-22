@@ -149,12 +149,14 @@ async function pollFor(label, condition) {
   assert.fail(`Timed out waiting for ${label}.`);
 }
 
-test('keeps the rendered preview when focus returns to the same source note', async () => {
+test('refreshes with a new iframe and keeps focus changes on the loaded deck', async () => {
   const scheduled = new Map();
   const navigations = [];
   let nextTimerId = 1;
 
   globalThis.__silmarilNotices = [];
+  const contentEl = createContentElement();
+  const iframeElements = [];
   globalThis.window = {
     setTimeout(callback) {
       const id = nextTimerId;
@@ -170,9 +172,14 @@ test('keeps the rendered preview when focus returns to the same source note', as
     createElement(tagName) {
       assert.equal(tagName, 'iframe');
       let source = '';
-      return {
+      const iframe = {
         addEventListener() {},
         focus() {},
+        replaceWith(replacement) {
+          const index = contentEl.children.indexOf(iframe);
+          assert.notEqual(index, -1);
+          contentEl.children[index] = replacement;
+        },
         setAttribute() {},
         set className(_value) {},
         set title(_value) {},
@@ -184,12 +191,13 @@ test('keeps the rendered preview when focus returns to the same source note', as
           navigations.push(value);
         },
       };
+      iframeElements.push(iframe);
+      return iframe;
     },
   };
 
   const adapter = new TestAdapter();
   const workspace = createWorkspace();
-  const contentEl = createContentElement();
   let sourceView = createSourceView('deck.md', '# Deck\n\n## First\n\nContent');
   const leaf = {
     app: {
@@ -215,6 +223,17 @@ test('keeps the rendered preview when focus returns to the same source note', as
   await view.onOpen();
   await runScheduledRender();
   await pollFor('the first preview navigation', () => navigations.length === 1);
+  const initialIframe = contentEl.children[0];
+
+  workspace.emit('editor-change', sourceView.editor, sourceView);
+  await runScheduledRender();
+  await pollFor('the refreshed preview navigation', () => navigations.length === 2);
+  assert.notEqual(
+    contentEl.children[0],
+    initialIframe,
+    'refreshing a deck must navigate a fresh iframe element',
+  );
+  assert.equal(iframeElements.length, 2);
 
   workspace.emit('active-leaf-change');
   await runScheduledRender();
@@ -222,14 +241,14 @@ test('keeps the rendered preview when focus returns to the same source note', as
 
   assert.equal(
     navigations.length,
-    1,
+    2,
     'focusing the unchanged source note must preserve the loaded preview',
   );
 
   sourceView = createSourceView('other.md', '# Other\n\n## Slide\n\nChanged');
   workspace.emit('active-leaf-change');
   await runScheduledRender();
-  await pollFor('the changed source preview navigation', () => navigations.length === 2);
+  await pollFor('the changed source preview navigation', () => navigations.length === 3);
 
   await view.onClose();
   assert.deepEqual(globalThis.__silmarilNotices, []);
