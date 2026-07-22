@@ -771,6 +771,20 @@ export function renderMermaidBlock(content: string): string {
       existing.lines = candidate.lines;
       existing.shape = candidate.shape;
     }
+    // Mermaid membership is claimed by the subgraph a node appears in, regardless of edge order.
+    // A node created at root scope by an earlier edge must move into a subgraph that later lists it.
+    // Only a subgraph claims a root-level node. Root never pulls a node back out of a subgraph, so
+    // the reverse order stays put and nested-subgraph members are left alone.
+    const container = currentContainer();
+    if (container !== ROOT_CONTAINER && parentOf.get(candidate.id) === ROOT_CONTAINER) {
+      const rootChildren = childList(ROOT_CONTAINER);
+      const at = rootChildren.indexOf(candidate.id);
+      if (at !== -1) {
+        rootChildren.splice(at, 1);
+      }
+      parentOf.set(candidate.id, container);
+      childList(container).push(candidate.id);
+    }
   };
 
   // Splits a body line into node segments separated by connectors, so a chained

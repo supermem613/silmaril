@@ -89,6 +89,41 @@ test("each subgraph box contains its own member nodes", () => {
   }
 });
 
+// A node first referenced by an edge outside a subgraph, then listed inside the
+// subgraph block, must still render inside that subgraph box. This mirrors the
+// skills-structure talk diagram whose "optional dirs" box rendered empty because
+// the skill-name --> dir edges were declared before the subgraph block.
+const EDGE_BEFORE_SUBGRAPH_SOURCE = `flowchart LR
+    root --> skill
+    skill --> refs
+    skill --> scripts
+    skill --> tests
+    skill --> evals
+    skill --> other
+    subgraph optional dirs
+    refs[references/]
+    scripts[scripts/]
+    tests[tests/]
+    evals[evals/]
+    other[other]
+    end`;
+
+test("a node referenced by an edge before its subgraph block still renders inside that subgraph", () => {
+  const svg = renderMermaidBlock(EDGE_BEFORE_SUBGRAPH_SOURCE);
+  const boxes = subgraphRects(svg);
+  const nodes = nodeRects(svg);
+
+  assert.equal(boxes.length, 1, "the optional dirs subgraph box renders");
+  const box = boxes[0];
+  assert.ok(box);
+  const inside = nodes.filter((node) => contains(box, node));
+  assert.equal(
+    inside.length,
+    5,
+    "all five directory nodes belong to the optional dirs subgraph even though their edges came first",
+  );
+});
+
 test("a TB inter-subgraph edge stacks the loop box above the semantic-skills box", () => {
   const svg = renderMermaidBlock(SUBGRAPH_SOURCE);
   const boxes = subgraphRects(svg);
