@@ -46,6 +46,12 @@ Strong emphasis uses the same amber treatment across dark and light modes with W
 
 See [the authoring guide](docs/authoring.md) for supported Markdown and [the schema guide](docs/schema.md) for command output. The authoring guide also documents `:::columns` blocks for side-by-side authoring.
 
+## Obsidian plugin
+
+Preview a Silmaril deck beside the Obsidian editor, with the preview following
+your cursor from slide to slide as you write. See
+[obsidian/README.md](obsidian/README.md) for install and usage.
+
 ## Development
 
 ```sh
