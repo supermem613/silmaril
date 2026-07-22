@@ -39,7 +39,8 @@ presentation ribbon icon. The preview follows the most recently active Markdown
 editor and updates after the file saves.
 Returning focus to the same note keeps the current preview in place.
 Switching to a different note re-renders it, and saved edits still update the
-preview.
+preview. Refreshes keep the current slide when it still exists in the updated
+deck.
 
 ## Security decision
 
@@ -49,9 +50,10 @@ Obsidian resource URL in an iframe with
 used because the Obsidian app host does not load it. This combination is
 acceptable here only because the frame hosts Silmaril's own
 trusted, self-generated deck. It must not host untrusted remote content. The
-plugin replaces the iframe before each refresh because Obsidian does not
-reliably navigate one iframe to a second local resource URL. It removes the
-managed file when the preview closes.
+plugin loads each refresh in a replacement iframe behind the current deck
+because Obsidian does not reliably navigate one iframe to a second local
+resource URL. It swaps the replacement into view only after the active slide is
+ready, then removes the managed file when the preview closes.
 
 ## Community submission
 

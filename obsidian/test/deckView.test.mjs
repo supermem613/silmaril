@@ -17,6 +17,9 @@ export class ItemView {
   registerEvent(eventRef) {
     return eventRef;
   }
+  registerDomEvent(element, eventName, handler) {
+    element.addEventListener(eventName, handler);
+  }
 }
 export class MarkdownView {}
 export class Notice {
@@ -68,8 +71,10 @@ const { FileSystemAdapter, SilmarilDeckView } = await import(
 );
 
 class TestAdapter extends FileSystemAdapter {
+  blockWrites = false;
   files = new Map();
   directories = new Set();
+  pendingWrites = [];
 
   async exists(filePath) {
     return this.files.has(filePath) || this.directories.has(filePath);
@@ -84,7 +89,18 @@ class TestAdapter extends FileSystemAdapter {
   }
 
   async write(filePath, content) {
+    if (this.blockWrites) {
+      await new Promise((resolve) => {
+        this.pendingWrites.push(resolve);
+      });
+    }
     this.files.set(filePath, content);
+  }
+
+  releaseNextWrite() {
+    const resolve = this.pendingWrites.shift();
+    assert.notEqual(resolve, undefined);
+    resolve();
   }
 
   getFullPath(filePath) {
@@ -149,15 +165,26 @@ async function pollFor(label, condition) {
   assert.fail(`Timed out waiting for ${label}.`);
 }
 
-test('refreshes with a new iframe and keeps focus changes on the loaded deck', async () => {
+test('refreshes after paint, restores the active slide, and keeps focus changes on the loaded deck', async () => {
   const scheduled = new Map();
   const navigations = [];
+  const windowHandlers = new Map();
   let nextTimerId = 1;
 
   globalThis.__silmarilNotices = [];
   const contentEl = createContentElement();
   const iframeElements = [];
   globalThis.window = {
+    addEventListener(eventName, handler) {
+      const handlers = windowHandlers.get(eventName) ?? [];
+      handlers.push(handler);
+      windowHandlers.set(eventName, handlers);
+    },
+    dispatchMessage(source, data) {
+      for (const handler of windowHandlers.get('message') ?? []) {
+        handler({ source, data });
+      }
+    },
     setTimeout(callback) {
       const id = nextTimerId;
       nextTimerId += 1;
@@ -171,10 +198,33 @@ test('refreshes with a new iframe and keeps focus changes on the loaded deck', a
   globalThis.document = {
     createElement(tagName) {
       assert.equal(tagName, 'iframe');
+      const loadHandlers = [];
+      const postedMessages = [];
       let source = '';
       const iframe = {
-        addEventListener() {},
+        addEventListener(eventName, handler) {
+          if (eventName === 'load') {
+            loadHandlers.push(handler);
+          }
+        },
+        dispatchLoad() {
+          for (const handler of loadHandlers.splice(0)) {
+            handler();
+          }
+        },
+        contentWindow: {
+          postMessage(message, targetOrigin) {
+            postedMessages.push({ message, targetOrigin });
+          },
+          postedMessages,
+        },
         focus() {},
+        remove() {
+          const index = contentEl.children.indexOf(iframe);
+          if (index !== -1) {
+            contentEl.children.splice(index, 1);
+          }
+        },
         replaceWith(replacement) {
           const index = contentEl.children.indexOf(iframe);
           assert.notEqual(index, -1);
@@ -224,10 +274,53 @@ test('refreshes with a new iframe and keeps focus changes on the loaded deck', a
   await runScheduledRender();
   await pollFor('the first preview navigation', () => navigations.length === 1);
   const initialIframe = contentEl.children[0];
+  initialIframe.dispatchLoad();
+  globalThis.window.dispatchMessage(initialIframe.contentWindow, {
+    type: 'silmaril-preview-state',
+    slideId: 'second-slide',
+    slideIndex: 2,
+  });
 
   workspace.emit('editor-change', sourceView.editor, sourceView);
   await runScheduledRender();
   await pollFor('the refreshed preview navigation', () => navigations.length === 2);
+  const pendingIframe = iframeElements[1];
+  assert.deepEqual(
+    contentEl.children,
+    [initialIframe, pendingIframe],
+    'the loaded deck must remain visible while its replacement loads',
+  );
+  pendingIframe.dispatchLoad();
+  assert.deepEqual(
+    contentEl.children,
+    [initialIframe, pendingIframe],
+    'the loaded deck must remain visible until the replacement paints',
+  );
+  globalThis.window.dispatchMessage(pendingIframe.contentWindow, {
+    type: 'silmaril-preview-ready',
+    slideId: 'overview',
+    slideIndex: 0,
+  });
+  assert.deepEqual(pendingIframe.contentWindow.postedMessages, [
+    {
+      message: {
+        type: 'silmaril-preview-restore',
+        slideId: 'second-slide',
+        slideIndex: 2,
+      },
+      targetOrigin: '*',
+    },
+  ]);
+  assert.deepEqual(
+    contentEl.children,
+    [initialIframe, pendingIframe],
+    'the loaded deck must remain visible while the replacement restores its slide',
+  );
+  globalThis.window.dispatchMessage(pendingIframe.contentWindow, {
+    type: 'silmaril-preview-ready',
+    slideId: 'second-slide',
+    slideIndex: 2,
+  });
   assert.notEqual(
     contentEl.children[0],
     initialIframe,
@@ -235,20 +328,57 @@ test('refreshes with a new iframe and keeps focus changes on the loaded deck', a
   );
   assert.equal(iframeElements.length, 2);
 
+  adapter.blockWrites = true;
+  workspace.emit('editor-change', sourceView.editor, sourceView);
+  await runScheduledRender();
+  workspace.emit('editor-change', sourceView.editor, sourceView);
+  await runScheduledRender();
+  assert.equal(adapter.pendingWrites.length, 1);
+
+  adapter.releaseNextWrite();
+  await pollFor(
+    'the first overlapping preview publication',
+    () => iframeElements.length === 3 && adapter.pendingWrites.length === 1,
+  );
+  const stalePendingIframe = iframeElements[2];
+  adapter.releaseNextWrite();
+  await pollFor(
+    'the latest overlapping preview publication',
+    () => iframeElements.length === 4,
+  );
+  adapter.blockWrites = false;
+  const latestPendingIframe = iframeElements[3];
+  assert.deepEqual(
+    contentEl.children,
+    [pendingIframe, latestPendingIframe],
+    'a newer refresh must cancel and remove an older pending iframe',
+  );
+  assert.equal(contentEl.children.includes(stalePendingIframe), false);
+  globalThis.window.dispatchMessage(latestPendingIframe.contentWindow, {
+    type: 'silmaril-preview-ready',
+    slideId: 'second-slide',
+    slideIndex: 2,
+  });
+
   workspace.emit('active-leaf-change');
   await runScheduledRender();
   await new Promise((resolve) => setImmediate(resolve));
 
   assert.equal(
     navigations.length,
-    2,
+    4,
     'focusing the unchanged source note must preserve the loaded preview',
   );
 
   sourceView = createSourceView('other.md', '# Other\n\n## Slide\n\nChanged');
   workspace.emit('active-leaf-change');
   await runScheduledRender();
-  await pollFor('the changed source preview navigation', () => navigations.length === 3);
+  await pollFor('the changed source preview navigation', () => navigations.length === 5);
+  globalThis.window.dispatchMessage(iframeElements[4].contentWindow, {
+    type: 'silmaril-preview-ready',
+    slideId: 'second-slide',
+    slideIndex: 2,
+  });
 
   await view.onClose();
   assert.deepEqual(globalThis.__silmarilNotices, []);

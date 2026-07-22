@@ -1,11 +1,24 @@
 .silmaril-preview {
   height: 100%;
+  overflow: hidden;
   padding: 0;
+  position: relative;
 }
 
 .silmaril-preview__frame {
+  display: block;
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   border: 0;
   background: var(--background-primary);
+}
+
+.silmaril-preview__frame--pending {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0;
+  pointer-events: none;
 }

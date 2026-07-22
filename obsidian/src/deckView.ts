@@ -26,13 +26,29 @@ interface RenderResult {
   readonly view: MarkdownView;
 }
 
+interface PreviewSlideState {
+  readonly slideId: string;
+  readonly slideIndex: number;
+}
+
+interface PreviewFrameMessage extends PreviewSlideState {
+  readonly type: 'silmaril-preview-ready' | 'silmaril-preview-state';
+}
+
 export class SilmarilDeckView extends ItemView {
+  private activeSlide: PreviewSlideState | null = null;
   private iframe: HTMLIFrameElement | null = null;
   private hasFocusedInitialDeck = false;
   private hasNavigatedDeck = false;
   private nextRequestId = 0;
   private lastRenderedSourceView: MarkdownView | null = null;
   private latestRenderRequest: RenderRequest | null = null;
+  private pendingIframe: HTMLIFrameElement | null = null;
+  private pendingPreviousIframe: HTMLIFrameElement | null = null;
+  private pendingRestoreRequested = false;
+  private pendingSlideTarget: PreviewSlideState | null = null;
+  private resolvePendingNavigation: ((didNavigate: boolean) => void) | null =
+    null;
   private readonly previewTransport: ReturnType<typeof createPreviewTransport>;
   private readonly scheduler: RenderScheduler<RenderRequest, RenderResult>;
 
@@ -145,11 +161,15 @@ export class SilmarilDeckView extends ItemView {
     this.contentEl.classList.add('silmaril-preview');
     this.hasFocusedInitialDeck = false;
     this.hasNavigatedDeck = false;
+    this.activeSlide = null;
 
     const iframe = this.createIframe();
     this.contentEl.append(iframe);
     this.iframe = iframe;
 
+    this.registerDomEvent(window, 'message', (event) => {
+      this.handlePreviewMessage(event);
+    });
     this.registerEvent(
       this.app.workspace.on('editor-change', (_editor, info) => {
         if (info === this.getSourceView()) {
@@ -166,6 +186,8 @@ export class SilmarilDeckView extends ItemView {
 
   protected async onClose(): Promise<void> {
     this.scheduler.dispose();
+    this.cancelPendingNavigation();
+    this.activeSlide = null;
     this.iframe = null;
     this.hasNavigatedDeck = false;
     await this.previewTransport.dispose();
@@ -192,6 +214,7 @@ export class SilmarilDeckView extends ItemView {
   }
 
   private async showDeck(html: string): Promise<boolean> {
+    this.cancelPendingNavigation();
     const currentIframe = this.iframe;
     if (currentIframe === null) {
       return false;
@@ -201,28 +224,38 @@ export class SilmarilDeckView extends ItemView {
     if (this.iframe !== currentIframe) {
       return false;
     }
+    this.cancelPendingNavigation();
 
-    let iframe = currentIframe;
-    if (this.hasNavigatedDeck) {
-      // Obsidian app resource URLs only reload reliably on a fresh iframe.
-      iframe = this.createIframe();
-      currentIframe.replaceWith(iframe);
-      this.iframe = iframe;
+    if (!this.hasNavigatedDeck) {
+      if (!this.hasFocusedInitialDeck) {
+        currentIframe.addEventListener(
+          'load',
+          () => {
+            this.iframe?.focus();
+            this.hasFocusedInitialDeck = true;
+          },
+          { once: true },
+        );
+      }
+      currentIframe.src = sourceUrl;
+      this.hasNavigatedDeck = true;
+      return true;
     }
 
-    if (!this.hasFocusedInitialDeck) {
-      iframe.addEventListener(
-        'load',
-        () => {
-          this.iframe?.focus();
-          this.hasFocusedInitialDeck = true;
-        },
-        { once: true },
-      );
-    }
-    iframe.src = sourceUrl;
-    this.hasNavigatedDeck = true;
-    return true;
+    // Keep the loaded deck visible until Obsidian finishes loading its replacement.
+    const pendingIframe = this.createIframe();
+    pendingIframe.className =
+      'silmaril-preview__frame silmaril-preview__frame--pending';
+    this.contentEl.append(pendingIframe);
+    this.pendingIframe = pendingIframe;
+    this.pendingPreviousIframe = currentIframe;
+    this.pendingRestoreRequested = false;
+    this.pendingSlideTarget = this.activeSlide;
+
+    return new Promise<boolean>((resolve) => {
+      this.resolvePendingNavigation = resolve;
+      pendingIframe.src = sourceUrl;
+    });
   }
 
   private createIframe(): HTMLIFrameElement {
@@ -232,6 +265,123 @@ export class SilmarilDeckView extends ItemView {
     // This grants scripts and same-origin access only to our trusted, self-generated deck.
     iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
     return iframe;
+  }
+
+  private handlePreviewMessage(event: MessageEvent): void {
+    const message = this.readPreviewMessage(event.data);
+    if (message === null) {
+      return;
+    }
+
+    if (event.source === this.iframe?.contentWindow) {
+      this.activeSlide = {
+        slideId: message.slideId,
+        slideIndex: message.slideIndex,
+      };
+      if (this.pendingIframe !== null) {
+        this.pendingSlideTarget = this.activeSlide;
+        this.pendingRestoreRequested = false;
+      }
+      return;
+    }
+
+    const pendingIframe = this.pendingIframe;
+    if (
+      pendingIframe === null ||
+      event.source !== pendingIframe.contentWindow ||
+      message.type !== 'silmaril-preview-ready'
+    ) {
+      return;
+    }
+
+    const target = this.pendingSlideTarget;
+    const matchesTarget =
+      target === null ||
+      message.slideId === target.slideId ||
+      message.slideIndex === target.slideIndex;
+    if (!matchesTarget && !this.pendingRestoreRequested) {
+      this.pendingRestoreRequested = true;
+      pendingIframe.contentWindow?.postMessage(
+        {
+          type: 'silmaril-preview-restore',
+          slideId: target.slideId,
+          slideIndex: target.slideIndex,
+        },
+        '*',
+      );
+      return;
+    }
+
+    this.activeSlide = {
+      slideId: message.slideId,
+      slideIndex: message.slideIndex,
+    };
+    this.completePendingNavigation();
+  }
+
+  private completePendingNavigation(): void {
+    const pendingIframe = this.pendingIframe;
+    const previousIframe = this.pendingPreviousIframe;
+    const resolve = this.resolvePendingNavigation;
+    if (
+      pendingIframe === null ||
+      previousIframe === null ||
+      resolve === null
+    ) {
+      return;
+    }
+
+    this.pendingIframe = null;
+    this.pendingPreviousIframe = null;
+    this.pendingRestoreRequested = false;
+    this.pendingSlideTarget = null;
+    this.resolvePendingNavigation = null;
+    pendingIframe.className = 'silmaril-preview__frame';
+    previousIframe.remove();
+    this.iframe = pendingIframe;
+    resolve(true);
+  }
+
+  private cancelPendingNavigation(): void {
+    const pendingIframe = this.pendingIframe;
+    const resolve = this.resolvePendingNavigation;
+    this.pendingIframe = null;
+    this.pendingPreviousIframe = null;
+    this.pendingRestoreRequested = false;
+    this.pendingSlideTarget = null;
+    this.resolvePendingNavigation = null;
+    pendingIframe?.remove();
+    resolve?.(false);
+  }
+
+  private readPreviewMessage(data: unknown): PreviewFrameMessage | null {
+    if (!this.isRecord(data)) {
+      return null;
+    }
+
+    const type = data.type;
+    const slideId = data.slideId;
+    const slideIndex = data.slideIndex;
+    if (
+      (type !== 'silmaril-preview-ready' &&
+        type !== 'silmaril-preview-state') ||
+      typeof slideId !== 'string' ||
+      typeof slideIndex !== 'number' ||
+      !Number.isInteger(slideIndex) ||
+      slideIndex < 0
+    ) {
+      return null;
+    }
+
+    return {
+      type,
+      slideId,
+      slideIndex,
+    };
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
   }
 
   private invalidateFailedRequest(request: RenderRequest): void {

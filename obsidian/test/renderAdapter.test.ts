@@ -11,4 +11,7 @@ test('renderDeck returns html and slideCount for a multi-slide deck', () => {
 
   assert.equal(result.slideCount, 2);
   assert.ok(result.html.includes('id="impress"'));
+  assert.ok(result.html.includes('silmaril-preview-ready'));
+  assert.ok(result.html.includes('silmaril-preview-state'));
+  assert.ok(result.html.includes('silmaril-preview-restore'));
 });
