@@ -51,7 +51,7 @@ export function renderTemplate(options: TemplateOptions): string {
         attributes.push(`data-rotate="${step.rotate}"`);
       }
 
-      return `      <div class="${classNames}" ${attributes.join(" ")}>${step.content}</div>`;
+      return `      <div id="${escapeHtml(step.id)}" class="${classNames}" ${attributes.join(" ")}>${step.content}</div>`;
     })
     .join("\n");
   const impressAttributes = Object.entries(options.impressAttributes)
