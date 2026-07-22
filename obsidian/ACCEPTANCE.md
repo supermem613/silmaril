@@ -24,6 +24,7 @@ through the Blob URL iframe.
 | Render latency | A typical two-slide deck updates within 500 ms after the 250 ms debounce without blocking editor input. | |
 | Inline script under CSP | The generated deck's inline script executes in the Obsidian desktop CSP. | |
 | Arrow navigation | Left and right arrow keys drive Impress slide navigation inside the focused preview. | |
+| Cursor follows slide | Clicking or moving the editor cursor onto a different `##` slide navigates the preview to that slide. A cursor above the first heading shows the overview. | |
 | Blob iframe | The preview loads from a Blob URL with the expected deck content, not a blank `srcdoc` frame. | |
 | Failure reporting | A save or render failure produces a visible Silmaril notice and does not replace the last good preview. | |
 | Security console | The live flow produces no red CSP or security console errors. | |

@@ -12,6 +12,7 @@ import {
   TimerSurface,
 } from './renderScheduler.js';
 import { createPreviewTransport } from './previewTransport.js';
+import { slideRanges } from '../../src/pipeline/parse.js';
 
 export const SILMARIL_VIEW_TYPE = 'silmaril-preview';
 
@@ -26,7 +27,7 @@ interface RenderResult {
   readonly view: MarkdownView;
 }
 
-interface PreviewSlideState {
+export interface PreviewSlideState {
   readonly slideId: string;
   readonly slideIndex: number;
 }
@@ -35,8 +36,35 @@ interface PreviewFrameMessage extends PreviewSlideState {
   readonly type: 'silmaril-preview-ready' | 'silmaril-preview-state';
 }
 
+// Maps a source-editor cursor line to the deck slide it belongs to. Slide
+// boundaries come from slideRanges so a cursor and its rendered slide always
+// agree on the same id. The rendered deck prepends an overview step, so a
+// content slide at parse order N is DOM step N + 1. The preview bridge matches
+// on slideId first and only uses slideIndex as a fallback, which keeps both
+// lookups correct.
+export function slideStateForCursorLine(
+  markdown: string,
+  cursorLine: number,
+): PreviewSlideState {
+  const ranges = slideRanges(markdown);
+  let matchedOrder = -1;
+  for (let order = 0; order < ranges.length; order += 1) {
+    if (ranges[order].headingIndex <= cursorLine) {
+      matchedOrder = order;
+    } else {
+      break;
+    }
+  }
+  if (matchedOrder === -1) {
+    // A cursor above the first slide heading maps to the zoomed-out board.
+    return { slideId: 'overview', slideIndex: 0 };
+  }
+  return { slideId: ranges[matchedOrder].id, slideIndex: matchedOrder + 1 };
+}
+
 export class SilmarilDeckView extends ItemView {
   private activeSlide: PreviewSlideState | null = null;
+  private cursorSyncHandle: number | null = null;
   private iframe: HTMLIFrameElement | null = null;
   private hasFocusedInitialDeck = false;
   private hasNavigatedDeck = false;
@@ -170,6 +198,9 @@ export class SilmarilDeckView extends ItemView {
     this.registerDomEvent(window, 'message', (event) => {
       this.handlePreviewMessage(event);
     });
+    this.registerDomEvent(document, 'selectionchange', () => {
+      this.scheduleCursorSync();
+    });
     this.registerEvent(
       this.app.workspace.on('editor-change', (_editor, info) => {
         if (info === this.getSourceView()) {
@@ -186,6 +217,7 @@ export class SilmarilDeckView extends ItemView {
 
   protected async onClose(): Promise<void> {
     this.scheduler.dispose();
+    this.cancelCursorSync();
     this.cancelPendingNavigation();
     this.activeSlide = null;
     this.iframe = null;
@@ -211,6 +243,53 @@ export class SilmarilDeckView extends ItemView {
     this.nextRequestId = request.requestId;
     this.latestRenderRequest = request;
     this.scheduler.enqueue(request);
+  }
+
+  private scheduleCursorSync(): void {
+    this.cancelCursorSync();
+    // Debounce so a drag-select or held arrow key drives a single navigation
+    // after the caret settles rather than one per intermediate position.
+    this.cursorSyncHandle = window.setTimeout(() => {
+      this.cursorSyncHandle = null;
+      this.syncCursorToPreview();
+    }, 120);
+  }
+
+  private cancelCursorSync(): void {
+    if (this.cursorSyncHandle !== null) {
+      window.clearTimeout(this.cursorSyncHandle);
+      this.cursorSyncHandle = null;
+    }
+  }
+
+  private syncCursorToPreview(): void {
+    const iframe = this.iframe;
+    const view = this.getSourceView();
+    if (iframe === null || view === null) {
+      return;
+    }
+    // A pending refresh restores its own slide once it lands, so let it settle
+    // instead of racing a navigation into an iframe about to be replaced.
+    if (this.pendingIframe !== null) {
+      return;
+    }
+
+    const target = slideStateForCursorLine(
+      view.editor.getValue(),
+      view.editor.getCursor().line,
+    );
+    if (this.activeSlide !== null && this.activeSlide.slideId === target.slideId) {
+      return;
+    }
+
+    iframe.contentWindow?.postMessage(
+      {
+        type: 'silmaril-preview-restore',
+        slideId: target.slideId,
+        slideIndex: target.slideIndex,
+      },
+      '*',
+    );
   }
 
   private async showDeck(html: string): Promise<boolean> {

@@ -37,6 +37,9 @@ Open a Markdown file that uses one optional `#` deck title and one `##` heading
 per slide. Run **Open Silmaril preview** from the command palette or use the
 presentation ribbon icon. The preview follows the most recently active Markdown
 editor and updates after the file saves.
+Moving the editor cursor onto a slide navigates the preview to that slide, so
+scrolling through the Markdown walks the deck alongside it. A cursor above the
+first `##` heading shows the board overview.
 Returning focus to the same note keeps the current preview in place.
 Switching to a different note re-renders it, and saved edits still update the
 preview. Refreshes keep the current slide when it still exists in the updated

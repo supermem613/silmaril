@@ -40,8 +40,8 @@ await build({
   stdin: {
     contents: `
       import { FileSystemAdapter } from 'obsidian';
-      import { SilmarilDeckView } from './src/deckView.ts';
-      export { FileSystemAdapter, SilmarilDeckView };
+      import { SilmarilDeckView, slideStateForCursorLine } from './src/deckView.ts';
+      export { FileSystemAdapter, SilmarilDeckView, slideStateForCursorLine };
     `,
     loader: 'ts',
     resolveDir: fileURLToPath(new URL('..', import.meta.url)),
@@ -66,9 +66,10 @@ await build({
   ],
 });
 
-const { FileSystemAdapter, SilmarilDeckView } = await import(
-  `${pathToFileURL(fileURLToPath(harnessUrl)).href}?test=${Date.now()}`
-);
+const { FileSystemAdapter, SilmarilDeckView, slideStateForCursorLine } =
+  await import(
+    `${pathToFileURL(fileURLToPath(harnessUrl)).href}?test=${Date.now()}`
+  );
 
 class TestAdapter extends FileSystemAdapter {
   blockWrites = false;
@@ -146,9 +147,14 @@ function createWorkspace() {
 }
 
 function createSourceView(path, markdown) {
+  let cursorLine = 0;
   return {
     editor: {
       getValue: () => markdown,
+      getCursor: () => ({ line: cursorLine, ch: 0 }),
+      setCursorLine(line) {
+        cursorLine = line;
+      },
     },
     file: { path },
     async save() {},
@@ -196,6 +202,7 @@ test('refreshes after paint, restores the active slide, and keeps focus changes 
     },
   };
   globalThis.document = {
+    addEventListener() {},
     createElement(tagName) {
       assert.equal(tagName, 'iframe');
       const loadHandlers = [];
@@ -379,6 +386,184 @@ test('refreshes after paint, restores the active slide, and keeps focus changes 
     slideId: 'second-slide',
     slideIndex: 2,
   });
+
+  await view.onClose();
+  assert.deepEqual(globalThis.__silmarilNotices, []);
+});
+
+test('maps a cursor line to the slide that owns it', () => {
+  const deck = [
+    '# Deck', // 0
+    '', // 1
+    '## First', // 2
+    '', // 3
+    'Alpha', // 4
+    '', // 5
+    '## Second', // 6
+    '', // 7
+    'Beta', // 8
+  ].join('\n');
+
+  assert.deepEqual(slideStateForCursorLine(deck, 0), {
+    slideId: 'overview',
+    slideIndex: 0,
+  });
+  assert.deepEqual(slideStateForCursorLine(deck, 2), {
+    slideId: 'first',
+    slideIndex: 1,
+  });
+  assert.deepEqual(slideStateForCursorLine(deck, 4), {
+    slideId: 'first',
+    slideIndex: 1,
+  });
+  assert.deepEqual(slideStateForCursorLine(deck, 6), {
+    slideId: 'second',
+    slideIndex: 2,
+  });
+  assert.deepEqual(slideStateForCursorLine(deck, 8), {
+    slideId: 'second',
+    slideIndex: 2,
+  });
+});
+
+test('navigates the loaded preview to the slide under the editor cursor', async () => {
+  const scheduled = new Map();
+  const navigations = [];
+  const windowHandlers = new Map();
+  const documentHandlers = new Map();
+  let nextTimerId = 1;
+
+  globalThis.__silmarilNotices = [];
+  const contentEl = createContentElement();
+  const iframeElements = [];
+  globalThis.window = {
+    addEventListener(eventName, handler) {
+      const handlers = windowHandlers.get(eventName) ?? [];
+      handlers.push(handler);
+      windowHandlers.set(eventName, handlers);
+    },
+    dispatchMessage(source, data) {
+      for (const handler of windowHandlers.get('message') ?? []) {
+        handler({ source, data });
+      }
+    },
+    setTimeout(callback) {
+      const id = nextTimerId;
+      nextTimerId += 1;
+      scheduled.set(id, callback);
+      return id;
+    },
+    clearTimeout(id) {
+      scheduled.delete(id);
+    },
+  };
+  globalThis.document = {
+    addEventListener(eventName, handler) {
+      const handlers = documentHandlers.get(eventName) ?? [];
+      handlers.push(handler);
+      documentHandlers.set(eventName, handlers);
+    },
+    dispatchSelectionChange() {
+      for (const handler of documentHandlers.get('selectionchange') ?? []) {
+        handler({});
+      }
+    },
+    createElement(tagName) {
+      assert.equal(tagName, 'iframe');
+      const postedMessages = [];
+      const iframe = {
+        addEventListener() {},
+        contentWindow: {
+          postMessage(message, targetOrigin) {
+            postedMessages.push({ message, targetOrigin });
+          },
+          postedMessages,
+        },
+        focus() {},
+        remove() {
+          const index = contentEl.children.indexOf(iframe);
+          if (index !== -1) {
+            contentEl.children.splice(index, 1);
+          }
+        },
+        setAttribute() {},
+        set className(_value) {},
+        set title(_value) {},
+        get src() {
+          return '';
+        },
+        set src(value) {
+          navigations.push(value);
+        },
+      };
+      iframeElements.push(iframe);
+      return iframe;
+    },
+  };
+
+  const adapter = new TestAdapter();
+  const workspace = createWorkspace();
+  const sourceView = createSourceView(
+    'deck.md',
+    ['# Deck', '', '## First', '', 'Alpha', '', '## Second', '', 'Beta'].join(
+      '\n',
+    ),
+  );
+  const leaf = {
+    app: {
+      vault: { adapter, configDir: '.obsidian' },
+      workspace,
+    },
+    contentEl,
+  };
+  const view = new SilmarilDeckView(leaf, () => sourceView);
+
+  const runScheduledRender = async () => {
+    const callbacks = [...scheduled.values()];
+    scheduled.clear();
+    for (const callback of callbacks) {
+      callback();
+    }
+    await new Promise((resolve) => setImmediate(resolve));
+  };
+
+  await view.onOpen();
+  await runScheduledRender();
+  await pollFor('the first preview navigation', () => navigations.length === 1);
+  const activeIframe = iframeElements[0];
+  globalThis.window.dispatchMessage(activeIframe.contentWindow, {
+    type: 'silmaril-preview-state',
+    slideId: 'overview',
+    slideIndex: 0,
+  });
+
+  sourceView.editor.setCursorLine(6);
+  globalThis.document.dispatchSelectionChange();
+  await runScheduledRender();
+
+  assert.deepEqual(activeIframe.contentWindow.postedMessages, [
+    {
+      message: {
+        type: 'silmaril-preview-restore',
+        slideId: 'second',
+        slideIndex: 2,
+      },
+      targetOrigin: '*',
+    },
+  ]);
+
+  globalThis.window.dispatchMessage(activeIframe.contentWindow, {
+    type: 'silmaril-preview-state',
+    slideId: 'second',
+    slideIndex: 2,
+  });
+  globalThis.document.dispatchSelectionChange();
+  await runScheduledRender();
+  assert.equal(
+    activeIframe.contentWindow.postedMessages.length,
+    1,
+    'a cursor still inside the active slide must not re-navigate the preview',
+  );
 
   await view.onClose();
   assert.deepEqual(globalThis.__silmarilNotices, []);
