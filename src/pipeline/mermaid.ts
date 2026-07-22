@@ -28,6 +28,35 @@ type PlacedNode = {
   height: number;
 };
 
+// A subgraph groups nodes inside a labeled container that lays out with its own direction.
+type Subgraph = {
+  id: string;
+  label: string[];
+  children: string[];
+};
+
+// Absolute geometry for a rendered subgraph container.
+type SubgraphBox = {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  label: string[];
+  depth: number;
+};
+
+// A rectangle-or-shape target that an edge can attach to, either a leaf node or a subgraph box.
+type EndpointBox = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  shape: NodeShape;
+};
+
+type BoxSize = { width: number; height: number };
+
 const LINE_HEIGHT = 18;
 const NODE_MIN_HEIGHT = 44;
 const RANK_GAP = 60;
@@ -35,6 +64,14 @@ const NODE_GAP = 32;
 const SIDE_PAD = 24;
 const TOP_PAD = 24;
 const CHAR_WIDTH = 8.2;
+
+const SUBGRAPH_PAD = 18;
+const SUBGRAPH_LABEL_TOP = 10;
+const SUBGRAPH_LABEL_GAP = 10;
+
+// Sentinel key for the outermost container. It cannot collide with a node or subgraph id
+// because parsed ids are restricted to [A-Za-z0-9_-]+.
+const ROOT_CONTAINER = '\u0000root';
 
 // Connectors are matched longest-first so that -.-> wins over --> and ---.
 const CONNECTORS: Array<{ token: string; style: EdgeStyle; arrow: boolean }> = [
@@ -46,7 +83,11 @@ const CONNECTORS: Array<{ token: string; style: EdgeStyle; arrow: boolean }> = [
   { token: '---', style: 'solid', arrow: false },
 ];
 
-const SKIP_LINE = /^(classDef|class|style|linkStyle|click|subgraph|end|direction|%%)\b/i;
+// Directives that carry no drawable geometry. subgraph, end, and direction are handled
+// explicitly before this test so they are not listed here.
+const SKIP_LINE = /^(classDef|class|style|linkStyle|click|%%)\b/i;
+
+const round = (value: number): number => Math.round(value * 100) / 100;
 
 function escapeHtml(value: string): string {
   return value
@@ -128,29 +169,32 @@ function parseNodeToken(token: string): MermaidNode | null {
   return { id, lines: lines[0] === '' && lines.length === 1 ? [id] : lines, shape: 'rect' };
 }
 
-function determineDirection(header: string): LayoutDirection {
-  return /\b(lr|rl)\b/i.test(header) ? 'LR' : 'TD';
-}
-
-function splitEdge(
-  masked: string,
-): { leftEnd: number; rightStart: number; style: EdgeStyle; arrow: boolean } | null {
-  let best: { index: number; token: string; style: EdgeStyle; arrow: boolean } | null = null;
-  for (const connector of CONNECTORS) {
-    const index = masked.indexOf(connector.token);
-    if (index !== -1 && (best === null || index < best.index)) {
-      best = { index, token: connector.token, style: connector.style, arrow: connector.arrow };
+// Reads a subgraph header such as `subgraph L3[loop]`, `subgraph "Title"`, or `subgraph id`.
+function parseSubgraphHeader(rest: string, fallbackIndex: number): { id: string; label: string[] } {
+  const trimmed = rest.trim();
+  if (!trimmed) {
+    return { id: `sub-${fallbackIndex}`, label: [''] };
+  }
+  const braced = trimmed.match(/^[A-Za-z0-9_-]+\s*[[({]/);
+  if (braced) {
+    const node = parseNodeToken(trimmed);
+    if (node) {
+      return { id: node.id, label: node.lines };
     }
   }
-  if (!best) {
-    return null;
+  const quoted = trimmed.match(/^"(.*)"$/);
+  if (quoted) {
+    return { id: trimmed, label: labelLines(quoted[1] ?? '') };
   }
-  return {
-    leftEnd: best.index,
-    rightStart: best.index + best.token.length,
-    style: best.style,
-    arrow: best.arrow,
-  };
+  const bare = trimmed.match(/^([A-Za-z0-9_-]+)\s*$/);
+  if (bare) {
+    return { id: bare[1] ?? trimmed, label: [bare[1] ?? trimmed] };
+  }
+  return { id: trimmed, label: labelLines(trimmed) };
+}
+
+function determineDirection(header: string): LayoutDirection {
+  return /\b(lr|rl)\b/i.test(header) ? 'LR' : 'TD';
 }
 
 function longestLine(lines: string[]): number {
@@ -253,16 +297,18 @@ function computeRanks(nodeOrder: string[], edges: MermaidEdge[]): Map<string, nu
   return rank;
 }
 
-function layoutNodes(
-  nodeOrder: string[],
-  nodes: Map<string, MermaidNode>,
+// Lays out a set of sized units along a main axis by rank and a cross axis by row order.
+// Leaf nodes and subgraph boxes are both units, so subgraphs stack and spread like nodes.
+function layoutUnits(
+  order: string[],
+  sizeOf: (id: string) => BoxSize,
   edges: MermaidEdge[],
   direction: LayoutDirection,
-): { placed: Map<string, PlacedNode>; width: number; height: number } {
-  const rank = computeRanks(nodeOrder, edges);
+): { placed: Map<string, BoxSize & { x: number; y: number }>; width: number; height: number } {
+  const rank = computeRanks(order, edges);
 
   const rows = new Map<number, string[]>();
-  for (const id of nodeOrder) {
+  for (const id of order) {
     const r = rank.get(id) ?? 0;
     const row = rows.get(r) ?? [];
     row.push(id);
@@ -270,12 +316,9 @@ function layoutNodes(
   }
   const maxRank = Math.max(0, ...rank.values());
 
-  const dims = new Map<string, { width: number; height: number }>();
-  for (const id of nodeOrder) {
-    const node = nodes.get(id);
-    if (node) {
-      dims.set(id, measureNode(node));
-    }
+  const dims = new Map<string, BoxSize>();
+  for (const id of order) {
+    dims.set(id, sizeOf(id));
   }
 
   const mainExtent = (id: string): number => {
@@ -303,7 +346,7 @@ function layoutNodes(
     maxCross = Math.max(maxCross, Math.max(0, total - NODE_GAP));
   }
 
-  const placed = new Map<string, PlacedNode>();
+  const placed = new Map<string, BoxSize & { x: number; y: number }>();
   let mainCursor = TOP_PAD;
   for (let r = 0; r <= maxRank; r += 1) {
     const row = rows.get(r) ?? [];
@@ -317,16 +360,15 @@ function layoutNodes(
 
     let crossCursor = SIDE_PAD + (maxCross - rowCross) / 2;
     for (const id of row) {
-      const node = nodes.get(id);
       const d = dims.get(id);
-      if (!node || !d) {
+      if (!d) {
         continue;
       }
-      // Center each node within its rank band along the main axis.
+      // Center each unit within its rank band along the main axis.
       const mainCoord = mainCursor + (rankMain - mainExtent(id)) / 2;
       const x = direction === 'LR' ? mainCoord : crossCursor;
       const y = direction === 'LR' ? crossCursor : mainCoord;
-      placed.set(id, { node, x, y, width: d.width, height: d.height });
+      placed.set(id, { x, y, width: d.width, height: d.height });
       crossCursor += crossExtent(id) + NODE_GAP;
     }
     mainCursor += rankMain + RANK_GAP;
@@ -337,6 +379,155 @@ function layoutNodes(
   const width = direction === 'LR' ? mainSize : crossSize;
   const height = direction === 'LR' ? crossSize : mainSize;
   return { placed, width, height };
+}
+
+// Walks up the parent chain until the entity that sits directly inside `container`.
+// Returns null when `id` is not a descendant of `container`.
+function directChild(container: string, id: string, parentOf: Map<string, string>): string | null {
+  let cur = id;
+  let guard = 0;
+  while (guard < 4096) {
+    const parent = parentOf.get(cur);
+    if (parent === undefined) {
+      return null;
+    }
+    if (parent === container) {
+      return cur;
+    }
+    cur = parent;
+    guard += 1;
+  }
+  return null;
+}
+
+function ancestorChain(id: string, parentOf: Map<string, string>): string[] {
+  const chain = [id];
+  let cur = id;
+  let guard = 0;
+  while (guard < 4096) {
+    const parent = parentOf.get(cur);
+    if (parent === undefined) {
+      break;
+    }
+    chain.push(parent);
+    cur = parent;
+    guard += 1;
+  }
+  return chain;
+}
+
+// The container in which two endpoints first become siblings owns the edge's elbow direction.
+function lowestCommonContainer(from: string, to: string, parentOf: Map<string, string>): string {
+  const fromChain = ancestorChain(from, parentOf);
+  const toSet = new Set(ancestorChain(to, parentOf));
+  for (const entry of fromChain) {
+    if (toSet.has(entry)) {
+      return entry;
+    }
+  }
+  return ROOT_CONTAINER;
+}
+
+type ContainerLayout = {
+  leaves: Map<string, PlacedNode>;
+  subs: Map<string, SubgraphBox>;
+  width: number;
+  height: number;
+};
+
+// Lays out one container and every subgraph nested inside it, returning absolute geometry
+// relative to the container origin. Each subgraph is laid out first, then treated as a single
+// sized unit in its parent so the whole box stacks and spreads like a node.
+function layoutContainer(
+  container: string,
+  childrenOf: Map<string, string[]>,
+  subgraphs: Map<string, Subgraph>,
+  nodes: Map<string, MermaidNode>,
+  parentOf: Map<string, string>,
+  edges: MermaidEdge[],
+  directionOf: Map<string, LayoutDirection>,
+): ContainerLayout {
+  const children = childrenOf.get(container) ?? [];
+  const direction = directionOf.get(container) ?? 'TD';
+
+  const innerByChild = new Map<string, ContainerLayout>();
+  const labelHeightOf = new Map<string, number>();
+  const boxSize = new Map<string, BoxSize>();
+
+  for (const child of children) {
+    if (subgraphs.has(child)) {
+      const inner = layoutContainer(child, childrenOf, subgraphs, nodes, parentOf, edges, directionOf);
+      const sub = subgraphs.get(child);
+      const labelLineCount = Math.max(1, sub?.label.length ?? 1);
+      const labelHeight = SUBGRAPH_LABEL_TOP + labelLineCount * LINE_HEIGHT + SUBGRAPH_LABEL_GAP;
+      innerByChild.set(child, inner);
+      labelHeightOf.set(child, labelHeight);
+      boxSize.set(child, {
+        width: inner.width + SUBGRAPH_PAD * 2,
+        height: inner.height + labelHeight + SUBGRAPH_PAD * 2,
+      });
+    } else {
+      const node = nodes.get(child);
+      boxSize.set(child, node ? measureNode(node) : { width: 0, height: 0 });
+    }
+  }
+
+  const unitEdges: MermaidEdge[] = [];
+  for (const edge of edges) {
+    const from = directChild(container, edge.from, parentOf);
+    const to = directChild(container, edge.to, parentOf);
+    if (from && to && from !== to) {
+      unitEdges.push({ ...edge, from, to });
+    }
+  }
+
+  const { placed, width, height } = layoutUnits(
+    children,
+    (id) => boxSize.get(id) ?? { width: 0, height: 0 },
+    unitEdges,
+    direction,
+  );
+
+  const leaves = new Map<string, PlacedNode>();
+  const subs = new Map<string, SubgraphBox>();
+
+  for (const child of children) {
+    const box = placed.get(child);
+    if (!box) {
+      continue;
+    }
+    if (subgraphs.has(child)) {
+      const sub = subgraphs.get(child);
+      const labelHeight = labelHeightOf.get(child) ?? 0;
+      subs.set(child, {
+        id: child,
+        x: box.x,
+        y: box.y,
+        width: box.width,
+        height: box.height,
+        label: sub?.label ?? [''],
+        depth: 0,
+      });
+      const inner = innerByChild.get(child);
+      if (inner) {
+        const dx = box.x + SUBGRAPH_PAD;
+        const dy = box.y + labelHeight + SUBGRAPH_PAD;
+        for (const [id, leaf] of inner.leaves) {
+          leaves.set(id, { ...leaf, x: leaf.x + dx, y: leaf.y + dy });
+        }
+        for (const [id, innerSub] of inner.subs) {
+          subs.set(id, { ...innerSub, x: innerSub.x + dx, y: innerSub.y + dy, depth: innerSub.depth + 1 });
+        }
+      }
+    } else {
+      const node = nodes.get(child);
+      if (node) {
+        leaves.set(child, { node, x: box.x, y: box.y, width: box.width, height: box.height });
+      }
+    }
+  }
+
+  return { leaves, subs, width, height };
 }
 
 function nodeText(lines: string[], cx: number, cy: number): string {
@@ -370,20 +561,42 @@ function nodeMarkup(placed: PlacedNode): string {
         </g>`;
 }
 
-function boundaryPoint(placed: PlacedNode, towardX: number, towardY: number): { x: number; y: number } {
-  const cx = placed.x + placed.width / 2;
-  const cy = placed.y + placed.height / 2;
+function subgraphMarkup(box: SubgraphBox): string {
+  const rect = `<rect class="mermaid-subgraph" x="${round(box.x)}" y="${round(box.y)}" width="${round(box.width)}" height="${round(box.height)}" rx="12" ry="12" />`;
+  const labelLinesToDraw = box.label.filter((line) => line.length > 0);
+  if (labelLinesToDraw.length === 0) {
+    return `
+        <g class="mermaid-subgraph-group">
+          ${rect}
+        </g>`;
+  }
+  const cx = round(box.x + box.width / 2);
+  const baseY = box.y + SUBGRAPH_LABEL_TOP + LINE_HEIGHT;
+  const tspans = labelLinesToDraw
+    .map((line, index) => `<tspan x="${cx}" y="${round(baseY + index * LINE_HEIGHT)}">${escapeHtml(line)}</tspan>`)
+    .join('');
+  const label = `<text class="mermaid-subgraph-label" text-anchor="middle" dominant-baseline="middle">${tspans}</text>`;
+  return `
+        <g class="mermaid-subgraph-group">
+          ${rect}
+          ${label}
+        </g>`;
+}
+
+function boundaryPoint(box: EndpointBox, towardX: number, towardY: number): { x: number; y: number } {
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
   const dx = towardX - cx;
   const dy = towardY - cy;
   if (dx === 0 && dy === 0) {
     return { x: cx, y: cy };
   }
-  const rx = placed.width / 2;
-  const ry = placed.height / 2;
+  const rx = box.width / 2;
+  const ry = box.height / 2;
   let scale: number;
-  if (placed.node.shape === 'diamond') {
+  if (box.shape === 'diamond') {
     scale = 1 / (Math.abs(dx) / rx + Math.abs(dy) / ry);
-  } else if (placed.node.shape === 'ellipse') {
+  } else if (box.shape === 'ellipse') {
     scale = 1 / Math.sqrt((dx * dx) / (rx * rx) + (dy * dy) / (ry * ry));
   } else {
     scale = 1 / Math.max(Math.abs(dx) / rx, Math.abs(dy) / ry);
@@ -392,8 +605,8 @@ function boundaryPoint(placed: PlacedNode, towardX: number, towardY: number): { 
 }
 
 function anchorPoints(
-  from: PlacedNode,
-  to: PlacedNode,
+  from: EndpointBox,
+  to: EndpointBox,
   direction: LayoutDirection,
 ): { x1: number; y1: number; x2: number; y2: number } {
   const fromCx = from.x + from.width / 2;
@@ -413,6 +626,99 @@ function anchorPoints(
   return { x1: start.x, y1: start.y, x2: toCx, y2: targetY };
 }
 
+function edgeMarkupFor(
+  edge: MermaidEdge,
+  from: EndpointBox,
+  to: EndpointBox,
+  direction: LayoutDirection,
+  markerId: string,
+): string {
+  const { x1, y1, x2, y2 } = anchorPoints(from, to, direction);
+  const dash = edge.style === 'dotted' ? ' stroke-dasharray="6 5"' : '';
+  const thick = edge.style === 'thick' ? ' stroke-width="3"' : '';
+  const marker = edge.arrow ? ` marker-end="url(#${markerId})"` : '';
+  // Follow Obsidian's edge shape: one long straight segment, one compact
+  // rounded corner, then a short square approach into the target.
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const sx = round(x1);
+  const sy = round(y1);
+  const tx = round(x2);
+  const ty = round(y2);
+  let d: string;
+  if (direction === 'LR') {
+    const approach = Math.sign(dx || 1) * Math.min(18, Math.abs(dx) / 3);
+    const cornerX = x2 - approach;
+    const lineDx = cornerX - x1;
+    const lineDy = y2 - y1;
+    const lineLength = Math.hypot(lineDx, lineDy);
+    const trim = Math.min(18, lineLength / 3);
+    const curveX = cornerX - (lineDx / lineLength) * trim;
+    const curveY = y2 - (lineDy / lineLength) * trim;
+    d = `M ${sx} ${sy} L ${round(curveX)} ${round(curveY)} Q ${round(cornerX)} ${ty} ${tx} ${ty}`;
+  } else {
+    const approach = Math.sign(dy || 1) * Math.min(18, Math.abs(dy) / 3);
+    const cornerY = y2 - approach;
+    const lineDx = x2 - x1;
+    const lineDy = cornerY - y1;
+    const lineLength = Math.hypot(lineDx, lineDy);
+    const trim = Math.min(18, lineLength / 3);
+    const curveX = x2 - (lineDx / lineLength) * trim;
+    const curveY = cornerY - (lineDy / lineLength) * trim;
+    d = `M ${sx} ${sy} L ${round(curveX)} ${round(curveY)} Q ${tx} ${round(cornerY)} ${tx} ${ty}`;
+  }
+  const path = `<path class="mermaid-edge" d="${d}"${dash}${thick}${marker} />`;
+  if (!edge.label) {
+    return path;
+  }
+  const mx = direction === 'LR' ? round(x2 - Math.sign(dx || 1) * 30) : tx;
+  const my = direction === 'LR' ? ty : round(y2 - Math.sign(dy || 1) * 30);
+  const labelWidth = edge.label.length * 6.5 + 10;
+  const bg = `<rect class="mermaid-edge-label-bg" x="${mx - labelWidth / 2}" y="${my - 9}" width="${labelWidth}" height="18" rx="4" ry="4" />`;
+  const labelText = `<text class="mermaid-edge-label" x="${mx}" y="${my + 1}" text-anchor="middle" dominant-baseline="middle">${escapeHtml(edge.label)}</text>`;
+  return `${path}${bg}${labelText}`;
+}
+
+function renderSvg(
+  normalized: string,
+  width: number,
+  height: number,
+  leaves: PlacedNode[],
+  subBoxes: SubgraphBox[],
+  edges: MermaidEdge[],
+  boxOf: (id: string) => EndpointBox | undefined,
+  directionOfEdge: (edge: MermaidEdge) => LayoutDirection,
+): string {
+  const hash = createHash('sha256').update(normalized).digest('hex').slice(0, 12);
+  const markerId = `mermaid-${hash}-arrow`;
+
+  const subMarkup = subBoxes.map((box) => subgraphMarkup(box)).join('');
+  const edgeMarkup = edges
+    .map((edge) => {
+      const from = boxOf(edge.from);
+      const to = boxOf(edge.to);
+      if (!from || !to) {
+        return '';
+      }
+      return edgeMarkupFor(edge, from, to, directionOfEdge(edge), markerId);
+    })
+    .join('');
+  const markup = leaves.map((leaf) => nodeMarkup(leaf)).join('');
+  const containerLayer = subBoxes.length > 0 ? `${subMarkup}\n      ` : '';
+
+  return `
+    <svg class="engineering-mermaid" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Mermaid diagram">
+      <defs>
+        <marker id="${markerId}" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse">
+          <path class="mermaid-arrowhead" d="M 0.5 0.5 L 8.5 4.5 L 0.5 8.5 z" />
+        </marker>
+      </defs>
+      ${containerLayer}${edgeMarkup}
+      ${markup}
+    </svg>
+  `;
+}
+
 export function renderMermaidBlock(content: string): string {
   const normalized = content.replace(/\r\n?/g, '\n').trim();
   if (!normalized) {
@@ -421,20 +727,43 @@ export function renderMermaidBlock(content: string): string {
 
   const lines = normalized.split('\n').map((line) => line.trim()).filter(Boolean);
   const header = lines[0] ?? '';
-  const direction = determineDirection(header);
+  const rootDirection = determineDirection(header);
 
   const nodes = new Map<string, MermaidNode>();
   const nodeOrder: string[] = [];
   const edges: MermaidEdge[] = [];
+  const subgraphs = new Map<string, Subgraph>();
+  const parentOf = new Map<string, string>();
+  const childrenOf = new Map<string, string[]>();
+  const directionOf = new Map<string, LayoutDirection>();
+  directionOf.set(ROOT_CONTAINER, rootDirection);
+
+  const stack: string[] = [];
+  const currentContainer = (): string => stack[stack.length - 1] ?? ROOT_CONTAINER;
+  const childList = (container: string): string[] => {
+    const existing = childrenOf.get(container);
+    if (existing) {
+      return existing;
+    }
+    const created: string[] = [];
+    childrenOf.set(container, created);
+    return created;
+  };
 
   const addNode = (candidate: MermaidNode | null) => {
     if (!candidate) {
+      return;
+    }
+    // An edge endpoint that names a subgraph references the whole box, not a leaf node.
+    if (subgraphs.has(candidate.id)) {
       return;
     }
     const existing = nodes.get(candidate.id);
     if (!existing) {
       nodes.set(candidate.id, candidate);
       nodeOrder.push(candidate.id);
+      parentOf.set(candidate.id, currentContainer());
+      childList(currentContainer()).push(candidate.id);
       return;
     }
     // A later definition with a real label upgrades a bare-id placeholder.
@@ -444,115 +773,173 @@ export function renderMermaidBlock(content: string): string {
     }
   };
 
+  // Splits a body line into node segments separated by connectors, so a chained
+  // edge such as `A --> B --> C` yields both A->B and B->C instead of collapsing.
+  const parseEdgeLine = (line: string): boolean => {
+    const masked = maskLabels(line);
+    const hits: Array<{ index: number; end: number; style: EdgeStyle; arrow: boolean }> = [];
+    let cursor = 0;
+    while (cursor < masked.length) {
+      let matched: { token: string; style: EdgeStyle; arrow: boolean } | null = null;
+      for (const connector of CONNECTORS) {
+        if (masked.startsWith(connector.token, cursor)) {
+          matched = connector;
+          break;
+        }
+      }
+      if (matched) {
+        hits.push({ index: cursor, end: cursor + matched.token.length, style: matched.style, arrow: matched.arrow });
+        cursor += matched.token.length;
+      } else {
+        cursor += 1;
+      }
+    }
+    if (hits.length === 0) {
+      return false;
+    }
+
+    const segments: string[] = [];
+    segments.push(line.slice(0, hits[0]?.index ?? 0));
+    for (let i = 0; i < hits.length; i += 1) {
+      const start = hits[i]?.end ?? 0;
+      const end = i + 1 < hits.length ? hits[i + 1]?.index ?? line.length : line.length;
+      segments.push(line.slice(start, end));
+    }
+
+    const parsedNodes: Array<{ node: MermaidNode; label: string }> = [];
+    const firstNode = parseNodeToken(segments[0] ?? '');
+    if (!firstNode) {
+      return false;
+    }
+    parsedNodes.push({ node: firstNode, label: '' });
+    for (let i = 1; i < segments.length; i += 1) {
+      let raw = (segments[i] ?? '').trim();
+      let edgeLabel = '';
+      const pipeMatch = raw.match(/^\|([^|]*)\|\s*/);
+      if (pipeMatch) {
+        edgeLabel = cleanText(pipeMatch[1] ?? '');
+        raw = raw.slice(pipeMatch[0].length).trim();
+      }
+      const node = parseNodeToken(raw);
+      if (!node) {
+        break;
+      }
+      parsedNodes.push({ node, label: edgeLabel });
+    }
+
+    if (parsedNodes.length < 2) {
+      return false;
+    }
+
+    for (let i = 0; i < parsedNodes.length; i += 1) {
+      addNode(parsedNodes[i]?.node ?? null);
+    }
+    for (let i = 0; i + 1 < parsedNodes.length; i += 1) {
+      const hit = hits[i];
+      const from = parsedNodes[i]?.node;
+      const to = parsedNodes[i + 1]?.node;
+      if (hit && from && to) {
+        edges.push({ from: from.id, to: to.id, label: parsedNodes[i + 1]?.label ?? '', style: hit.style, arrow: hit.arrow });
+      }
+    }
+    return true;
+  };
+
+  let anonymousSubgraphs = 0;
   const bodyStart = /^(flowchart|graph)\b/i.test(header) ? 1 : 0;
   for (const line of lines.slice(bodyStart)) {
+    const subgraphOpen = line.match(/^subgraph\b\s*(.*)$/i);
+    if (subgraphOpen) {
+      const parent = currentContainer();
+      const header = parseSubgraphHeader(subgraphOpen[1] ?? '', anonymousSubgraphs);
+      anonymousSubgraphs += 1;
+      let id = header.id;
+      if (nodes.has(id) || subgraphs.has(id)) {
+        id = `${id}-sub-${anonymousSubgraphs}`;
+      }
+      subgraphs.set(id, { id, label: header.label, children: [] });
+      parentOf.set(id, parent);
+      childList(parent).push(id);
+      directionOf.set(id, directionOf.get(parent) ?? rootDirection);
+      stack.push(id);
+      continue;
+    }
+    if (/^end$/i.test(line)) {
+      stack.pop();
+      continue;
+    }
+    const directionLine = line.match(/^direction\s+(TB|TD|BT|LR|RL)\b/i);
+    if (directionLine) {
+      const value: LayoutDirection = /LR|RL/i.test(directionLine[1] ?? '') ? 'LR' : 'TD';
+      directionOf.set(currentContainer(), value);
+      continue;
+    }
     if (SKIP_LINE.test(line) || /^(flowchart|graph)\b/i.test(line)) {
       continue;
     }
 
-    const masked = maskLabels(line);
-    const split = splitEdge(masked);
-    if (split) {
-      const leftRaw = line.slice(0, split.leftEnd);
-      let rightRaw = line.slice(split.rightStart).trim();
-      let edgeLabel = '';
-      const pipeMatch = rightRaw.match(/^\|([^|]*)\|\s*/);
-      if (pipeMatch) {
-        edgeLabel = cleanText(pipeMatch[1] ?? '');
-        rightRaw = rightRaw.slice(pipeMatch[0].length).trim();
-      }
-      const from = parseNodeToken(leftRaw);
-      const to = parseNodeToken(rightRaw);
-      if (from && to) {
-        addNode(from);
-        addNode(to);
-        edges.push({ from: from.id, to: to.id, label: edgeLabel, style: split.style, arrow: split.arrow });
-        continue;
-      }
+    if (parseEdgeLine(line)) {
+      continue;
     }
 
     addNode(parseNodeToken(line));
   }
 
-  if (nodeOrder.length === 0) {
+  if (nodeOrder.length === 0 && subgraphs.size === 0) {
     return '<pre><code></code></pre>';
   }
 
-  const { placed, width, height } = layoutNodes(nodeOrder, nodes, edges, direction);
-  const hash = createHash('sha256').update(normalized).digest('hex').slice(0, 12);
-  const renderId = `mermaid-${hash}`;
-  const markerId = `${renderId}-arrow`;
-
-  const edgeMarkup = edges
-    .map((edge) => {
-      const from = placed.get(edge.from);
-      const to = placed.get(edge.to);
-      if (!from || !to) {
-        return '';
+  if (subgraphs.size === 0) {
+    const { placed, width, height } = layoutUnits(
+      nodeOrder,
+      (id) => {
+        const node = nodes.get(id);
+        return node ? measureNode(node) : { width: 0, height: 0 };
+      },
+      edges,
+      rootDirection,
+    );
+    const leaves: PlacedNode[] = [];
+    for (const id of nodeOrder) {
+      const box = placed.get(id);
+      const node = nodes.get(id);
+      if (box && node) {
+        leaves.push({ node, x: box.x, y: box.y, width: box.width, height: box.height });
       }
-      const { x1, y1, x2, y2 } = anchorPoints(from, to, direction);
-      const dash = edge.style === 'dotted' ? ' stroke-dasharray="6 5"' : '';
-      const thick = edge.style === 'thick' ? ' stroke-width="3"' : '';
-      const marker = edge.arrow ? ` marker-end="url(#${markerId})"` : '';
-      // Follow Obsidian's edge shape: one long straight segment, one compact
-      // rounded corner, then a short square approach into the target.
-      const round = (value: number): number => Math.round(value * 100) / 100;
-      const dx = x2 - x1;
-      const dy = y2 - y1;
-      const sx = round(x1);
-      const sy = round(y1);
-      const tx = round(x2);
-      const ty = round(y2);
-      let d: string;
-      if (direction === 'LR') {
-        const approach = Math.sign(dx || 1) * Math.min(18, Math.abs(dx) / 3);
-        const cornerX = x2 - approach;
-        const lineDx = cornerX - x1;
-        const lineDy = y2 - y1;
-        const lineLength = Math.hypot(lineDx, lineDy);
-        const trim = Math.min(18, lineLength / 3);
-        const curveX = cornerX - (lineDx / lineLength) * trim;
-        const curveY = y2 - (lineDy / lineLength) * trim;
-        d = `M ${sx} ${sy} L ${round(curveX)} ${round(curveY)} Q ${round(cornerX)} ${ty} ${tx} ${ty}`;
-      } else {
-        const approach = Math.sign(dy || 1) * Math.min(18, Math.abs(dy) / 3);
-        const cornerY = y2 - approach;
-        const lineDx = x2 - x1;
-        const lineDy = cornerY - y1;
-        const lineLength = Math.hypot(lineDx, lineDy);
-        const trim = Math.min(18, lineLength / 3);
-        const curveX = x2 - (lineDx / lineLength) * trim;
-        const curveY = cornerY - (lineDy / lineLength) * trim;
-        d = `M ${sx} ${sy} L ${round(curveX)} ${round(curveY)} Q ${tx} ${round(cornerY)} ${tx} ${ty}`;
+    }
+    const boxOf = (id: string): EndpointBox | undefined => {
+      const box = placed.get(id);
+      const node = nodes.get(id);
+      if (!box || !node) {
+        return undefined;
       }
-      const path = `<path class="mermaid-edge" d="${d}"${dash}${thick}${marker} />`;
-      if (!edge.label) {
-        return path;
-      }
-      const mx = direction === 'LR' ? round(x2 - Math.sign(dx || 1) * 30) : tx;
-      const my = direction === 'LR' ? ty : round(y2 - Math.sign(dy || 1) * 30);
-      const labelWidth = edge.label.length * 6.5 + 10;
-      const bg = `<rect class="mermaid-edge-label-bg" x="${mx - labelWidth / 2}" y="${my - 9}" width="${labelWidth}" height="18" rx="4" ry="4" />`;
-      const labelText = `<text class="mermaid-edge-label" x="${mx}" y="${my + 1}" text-anchor="middle" dominant-baseline="middle">${escapeHtml(edge.label)}</text>`;
-      return `${path}${bg}${labelText}`;
-    })
-    .join('');
+      return { x: box.x, y: box.y, width: box.width, height: box.height, shape: node.shape };
+    };
+    return renderSvg(normalized, width, height, leaves, [], edges, boxOf, () => rootDirection);
+  }
 
-  const markup = nodeOrder
-    .map((id) => placed.get(id))
-    .filter((entry): entry is PlacedNode => Boolean(entry))
-    .map((entry) => nodeMarkup(entry))
-    .join('');
+  const root = layoutContainer(ROOT_CONTAINER, childrenOf, subgraphs, nodes, parentOf, edges, directionOf);
+  const orderedLeaves: PlacedNode[] = [];
+  for (const id of nodeOrder) {
+    const leaf = root.leaves.get(id);
+    if (leaf) {
+      orderedLeaves.push(leaf);
+    }
+  }
+  const subBoxes = [...root.subs.values()].sort((a, b) => a.depth - b.depth);
+  const boxOf = (id: string): EndpointBox | undefined => {
+    const leaf = root.leaves.get(id);
+    if (leaf) {
+      return { x: leaf.x, y: leaf.y, width: leaf.width, height: leaf.height, shape: leaf.node.shape };
+    }
+    const sub = root.subs.get(id);
+    if (sub) {
+      return { x: sub.x, y: sub.y, width: sub.width, height: sub.height, shape: 'rect' };
+    }
+    return undefined;
+  };
+  const directionOfEdge = (edge: MermaidEdge): LayoutDirection =>
+    directionOf.get(lowestCommonContainer(edge.from, edge.to, parentOf)) ?? rootDirection;
 
-  return `
-    <svg class="engineering-mermaid" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Mermaid diagram">
-      <defs>
-        <marker id="${markerId}" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse">
-          <path class="mermaid-arrowhead" d="M 0.5 0.5 L 8.5 4.5 L 0.5 8.5 z" />
-        </marker>
-      </defs>
-      ${edgeMarkup}
-      ${markup}
-    </svg>
-  `;
+  return renderSvg(normalized, root.width, root.height, orderedLeaves, subBoxes, edges, boxOf, directionOfEdge);
 }
