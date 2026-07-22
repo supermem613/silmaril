@@ -45,6 +45,14 @@ Switching to a different note re-renders it, and saved edits still update the
 preview. Refreshes keep the current slide when it still exists in the updated
 deck.
 
+## Publish HTML
+
+Run **Publish HTML** from the command palette to write the active deck as a
+single self-contained HTML file. This is the same offline deck that
+`silmaril build` produces, with no live-preview scripting. When your platform
+offers a native save dialog you choose the location. Otherwise the file is
+written beside the note as `<note>.html`.
+
 ## Security decision
 
 The preview writes the generated deck to a managed local file and loads its
