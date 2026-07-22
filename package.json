@@ -1,6 +1,6 @@
 {
   "name": "silmaril",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "A trivial, no-frills Markdown-to-slides pipeline for engineers",
   "repository": {
     "type": "git",
