@@ -166,6 +166,8 @@ export const engineeringTokensCss = `
     display: block;
     width: 100%;
     height: auto;
+    min-height: 0;
+    max-height: 520px;
     margin: 0.25rem 0;
   }
 
@@ -246,6 +248,8 @@ export const engineeringTokensCss = `
     gap: 1.35rem;
     width: 1000px;
     min-height: 700px;
+    max-height: 780px;
+    overflow: hidden;
     box-sizing: border-box;
     border: 1px solid var(--border);
     border-radius: 1rem;
