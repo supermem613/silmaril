@@ -19,6 +19,26 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+type ClassifiedHref =
+  | { readonly kind: "internal"; readonly href: string }
+  | { readonly kind: "external"; readonly href: string }
+  | { readonly kind: "none" };
+
+// A deck stays self-contained, so only two link shapes may produce an anchor.
+// Internal fragment links target a slide step by its slug id for hash navigation.
+// External links are limited to http, https, and mailto so a relative or dangerous
+// href collapses to plain text instead of a dangling or unsafe reference.
+function classifyHref(href: string): ClassifiedHref {
+  const value = href.trim();
+  if (/^#[A-Za-z0-9][A-Za-z0-9_-]*$/.test(value)) {
+    return { kind: "internal", href: value };
+  }
+  if (/^(?:https?:\/\/|mailto:)/i.test(value)) {
+    return { kind: "external", href: value };
+  }
+  return { kind: "none" };
+}
+
 function createMarkdownRenderer(): MarkdownIt {
   const markdownIt = new MarkdownIt(DEFAULT_RENDERER_OPTIONS);
 
@@ -43,8 +63,25 @@ function createMarkdownRenderer(): MarkdownIt {
     return renderCodeBlock(content, language);
   };
 
-  markdownIt.renderer.rules.link_open = () => "";
-  markdownIt.renderer.rules.link_close = () => "";
+  // Links do not nest, so a stack keeps each link_close paired with the tag its
+  // link_open produced. A dropped link pushes an empty close so the pairing holds.
+  const linkCloseStack: string[] = [];
+  markdownIt.renderer.rules.link_open = (tokens, index) => {
+    const token = tokens[index];
+    const href = typeof token?.attrGet === "function" ? token.attrGet("href") ?? "" : "";
+    const link = classifyHref(href);
+    if (link.kind === "internal") {
+      linkCloseStack.push("</a>");
+      return `<a href="${escapeHtml(link.href)}">`;
+    }
+    if (link.kind === "external") {
+      linkCloseStack.push("</a>");
+      return `<a href="${escapeHtml(link.href)}" target="_blank" rel="noreferrer noopener">`;
+    }
+    linkCloseStack.push("");
+    return "";
+  };
+  markdownIt.renderer.rules.link_close = () => linkCloseStack.pop() ?? "";
 
   markdownIt.renderer.rules.image = (tokens, index) => {
     const token = tokens[index];
