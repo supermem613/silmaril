@@ -12,6 +12,9 @@ test('documentation covers the serve, live reload, version, and emphasis workflo
     ['docs/authoring.md', authoring],
   ] as const;
 
+  assert.match(readme, /\| `silmaril publish <input>` \|/i, "README should document silmaril publish in the command table");
+  assert.match(readme, /`publish` accepts `--out <file>` and `--open`/i, "README should describe publish in prose");
+
   for (const [name, content] of docs) {
     assert.match(content, /focused/i, `${name} should describe the focused-slide flow`);
     assert.match(content, /silmaril serve/i, `${name} should document the serve command`);

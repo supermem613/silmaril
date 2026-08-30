@@ -33,13 +33,13 @@ program
   });
 
 program
-  .command("build <input>")
-  .description("Build a Markdown presentation as a single HTML file")
+  .command("publish <input>")
+  .description("Publish a Markdown presentation as a single HTML file")
   .option("--out <file>", "Write the HTML to a file instead of the system temp directory")
   .option("--open", "Open the generated HTML in the default application")
   .action(async (input: string, opts: { out?: string; open?: boolean }) => {
-    const { buildCommand } = await import("./commands/build.js");
-    await buildCommand(input, opts);
+    const { publishCommand } = await import("./commands/publish.js");
+    await publishCommand(input, opts);
   });
 
 program

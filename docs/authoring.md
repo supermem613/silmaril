@@ -49,12 +49,12 @@ Right column body with its own Markdown, including nested lists and code blocks.
 
 Inside a `:::columns` block, a top-level `---` is a column divider rather than a thematic break or horizontal rule. Each column can contain recursive Markdown bodies, and the layout stacks on narrow screens and print output.
 
-## Build
+## Publish
 
 ```sh
-node dist/cli.js build talk.md
-node dist/cli.js build talk.md --out talk.html
-node dist/cli.js build talk.md --open
+node dist/cli.js publish talk.md
+node dist/cli.js publish talk.md --out talk.html
+node dist/cli.js publish talk.md --open
 ```
 
 Without `--out`, Silmaril writes `<source-name>.html` to the system temp directory.
@@ -72,3 +72,19 @@ node dist/cli.js serve talk.md --open
 ```
 
 `serve` (`silmaril serve`) starts a local server with live reload on port 5173 by default. Edit the Markdown in your own editor and the browser reloads on save, so the file stays the source of truth. Rendering is full fidelity, including Mermaid. Strong emphasis uses an amber color with WCAG AA contrast in both display modes.
+
+## Library API
+
+If you want to render a Markdown string from another program, import `render` from `silmaril` and pass the content in memory:
+
+```js
+import { render } from "silmaril";
+
+const markdown = "# Review\n\n## Context\n\nRender this from memory.";
+const { html, slideCount } = render(markdown, {
+  title: "Review deck",
+  assetBaseDir: "/assets",
+});
+```
+
+`render(markdown, options)` returns `{ html, slideCount }`. The options object can include `title`, `assetBaseDir`, `version`, `repositoryUrl`, and `liveReload`. `render()` is filesystem-free and deploy-agnostic: it is the same rendering seam the CLI publish path consumes internally.

@@ -21,7 +21,7 @@ test("bench reports the byte length of the real build pipeline", () => {
   try {
     const build = spawnSync(
       process.execPath,
-      [path.join(repositoryRoot, "dist", "cli.js"), "build", fixturePath, "--out", outputPath],
+      [path.join(repositoryRoot, "dist", "cli.js"), "publish", fixturePath, "--out", outputPath],
       { cwd: repositoryRoot, encoding: "utf8" },
     );
     assert.equal(build.status, 0, build.stderr || build.stdout);

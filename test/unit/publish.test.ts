@@ -5,8 +5,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
 
-test("build writes the heading deck with deterministic board placement", () => {
-  const directory = mkdtempSync(join(tmpdir(), "silmaril-build-"));
+test("publish writes the heading deck with deterministic board placement", () => {
+  const directory = mkdtempSync(join(tmpdir(), "silmaril-publish-"));
   const inputPath = join(directory, "presentation.md");
   const outputPath = join(directory, "presentation.html");
 
@@ -15,7 +15,7 @@ test("build writes the heading deck with deterministic board placement", () => {
     writeFileSync(inputPath, `# Customer Skills Briefing\n\n${slides}\n`, "utf8");
     const result = spawnSync(
       process.execPath,
-      [resolve("dist/cli.js"), "build", inputPath, "--out", outputPath],
+      [resolve("dist/cli.js"), "publish", inputPath, "--out", outputPath],
       { cwd: resolve("."), encoding: "utf8" },
     );
 

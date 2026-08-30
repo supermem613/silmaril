@@ -7,7 +7,7 @@ Use one `#` title and a `##` heading for each slide.
 ## Build one file
 
 ```sh
-node dist/cli.js build examples/silmaril-tour.md --out silmaril-tour.html
+node dist/cli.js publish examples/silmaril-tour.md --out silmaril-tour.html
 ```
 
 The output contains its styles, scripts, diagrams, and local images.

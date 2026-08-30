@@ -53,8 +53,8 @@ export const commandSpecs: CommandSpec[] = [
     skillReferences: ["schema", "catalog"],
   },
   {
-    path: ["build"],
-    summary: "Build a Markdown presentation as a single HTML file.",
+    path: ["publish"],
+    summary: "Publish a Markdown presentation as a single HTML file.",
     effect: "mutate-local",
     input: {
       positionals: ["input"],
@@ -63,10 +63,10 @@ export const commandSpecs: CommandSpec[] = [
         { name: "--open", type: "boolean", summary: "Open the generated HTML in the default application." },
       ],
     },
-    output: { documented: true, schema: "BuildResult", coverage: ["filesystem", "stdout", "stderr"] },
-    examples: ["build slides.md", "build slides.md --out slides.html", "build slides.md --open"],
-    readmeSummary: "build - Build a Markdown presentation as a single HTML file.",
-    skillReferences: ["build", "presentation"],
+    output: { documented: true, schema: "PublishResult", coverage: ["filesystem", "stdout", "stderr"] },
+    examples: ["publish slides.md", "publish slides.md --out slides.html", "publish slides.md --open"],
+    readmeSummary: "publish - Publish a Markdown presentation as a single HTML file.",
+    skillReferences: ["publish", "presentation"],
   },
   {
     path: ["serve"],

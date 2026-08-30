@@ -4,14 +4,14 @@
 
 ```sh
 node dist/cli.js schema
-node dist/cli.js schema build
+node dist/cli.js schema publish
 node dist/cli.js schema --summary
 ```
 
-## Build
+## Publish
 
 ```text
-silmaril build <input> [--out <file>] [--open]
+silmaril publish <input> [--out <file>] [--open]
 ```
 
 The success envelope contains:
@@ -19,7 +19,7 @@ The success envelope contains:
 ```json
 {
   "ok": true,
-  "command": "build",
+  "command": "publish",
   "data": {
     "outputPath": "C:\\path\\to\\talk.html",
     "byteCount": 12345,

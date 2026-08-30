@@ -6,14 +6,14 @@ import { fileURLToPath } from "node:url";
 import { emitJsonFailure, emitJsonSuccess } from "../output.js";
 import { renderPresentationFromFile } from "../pipeline/renderFile.js";
 
-export type BuildOptions = {
+export type PublishOptions = {
   out?: string;
   open?: boolean;
 };
 
 export type OpenOutput = (outputPath: string) => void;
 
-export interface BuildDependencies {
+export interface PublishDependencies {
   openOutput?: OpenOutput;
 }
 
@@ -51,7 +51,7 @@ export function requestOpenOutput(
   return { requested: true, launched: true, target: outputPath };
 }
 
-export async function buildCommand(input: string, opts: BuildOptions, deps: BuildDependencies = {}): Promise<void> {
+export async function publishCommand(input: string, opts: PublishOptions, deps: PublishDependencies = {}): Promise<void> {
   let temporaryPath: string | null = null;
 
   try {
@@ -77,7 +77,7 @@ export async function buildCommand(input: string, opts: BuildOptions, deps: Buil
       ? requestOpenOutput(outputPath, deps.openOutput ?? launchDefaultApplication)
       : null;
 
-    emitJsonSuccess("build", {
+    emitJsonSuccess("publish", {
       outputPath,
       byteCount: Buffer.byteLength(html, "utf8"),
       slideCount,
@@ -88,7 +88,7 @@ export async function buildCommand(input: string, opts: BuildOptions, deps: Buil
     if (temporaryPath && existsSync(temporaryPath)) {
       rmSync(temporaryPath, { force: true });
     }
-    emitJsonFailure("build", "build-failed", error instanceof Error ? error.message : String(error));
+    emitJsonFailure("publish", "publish-failed", error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 }

@@ -8,7 +8,7 @@ describe("schema", () => {
     assert.deepEqual(schema.commands.map((command) => command.path), [
       ["doctor"],
       ["schema"],
-      ["build"],
+      ["publish"],
       ["serve"],
       ["update"],
     ]);

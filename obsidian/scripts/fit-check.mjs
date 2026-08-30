@@ -26,11 +26,11 @@ async function versionSurface() {
     'buildPresentation',
     'inlineMarkdown',
     'parseBoard',
+    'render',
     'renderMarkdown',
     'validateBuildOutput',
   ]);
-  assert.ok(cliText.includes('.command("build <input>")'));
-  assert.ok(!cliText.includes('.command("publish'));
+  assert.ok(cliText.includes('.command("publish <input>")'));
 }
 
 async function noRejectedApproaches() {
@@ -71,7 +71,7 @@ async function noRejectedApproaches() {
   assert.ok(registry.includes('function buildReadmeSummary'));
   assert.ok(registry.includes('export function buildSchema'));
   assert.ok(indexText.includes('export { buildPresentation }'));
-  assert.ok(cliText.includes('.command("build <input>")'));
+  assert.ok(cliText.includes('.command("publish <input>")'));
 }
 
 async function securityDecision() {

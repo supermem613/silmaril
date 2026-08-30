@@ -49,7 +49,7 @@ deck.
 
 Run **Publish HTML** from the command palette to write the active deck as a
 single self-contained HTML file. This is the same offline deck that
-`silmaril build` produces, with no live-preview scripting. When your platform
+`silmaril publish` produces, with no live-preview scripting. When your platform
 offers a native save dialog you choose the location. Otherwise the file is
 written beside the note as `<note>.html`.
 
