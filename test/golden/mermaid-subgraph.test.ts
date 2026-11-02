@@ -13,7 +13,31 @@ const SUBGRAPH_SOURCE = `flowchart TB
     end
     L3 --> L2`;
 
+const FORWARD_SUBGRAPH_SOURCE = `flowchart LR
+  cron[Cron] --> outer
+  invoke[Invoke] --> outer
+  subgraph outer [Outer loop]
+    direction LR
+    triggers[Triggers] --> inner
+    subgraph inner [Inner loop]
+      direction TB
+      bp[SIT blueprints]
+      ef[Evaluation Findings]
+      ff[Field Findings]
+      syn[SIT synthetics]
+      wf["Candidate Search and Promotion"]
+      bp --> wf
+      ef -.-> wf
+      ff -.-> wf
+      syn --> wf
+    end
+    inner --> patch[Git patch]
+    patch --> pr[PR]
+    patch --> fi[Factory improvements]
+  end`;
+
 type Rect = { x: number; y: number; width: number; height: number };
+type Point = { x: number; y: number };
 
 function subgraphRects(svg: string): Rect[] {
   return [...svg.matchAll(
@@ -37,6 +61,52 @@ function contains(box: Rect, inner: Rect): boolean {
   const cy = inner.y + inner.height / 2;
   return cx >= box.x && cx <= box.x + box.width && cy >= box.y && cy <= box.y + box.height;
 }
+
+function touchesBoundary(box: Rect | undefined, point: Point | undefined): boolean {
+  if (!box || !point) {
+    return false;
+  }
+  const right = Number((box.x + box.width).toFixed(2));
+  const bottom = Number((box.y + box.height).toFixed(2));
+  return ((point.x === box.x || point.x === right) && point.y >= box.y && point.y <= bottom)
+    || ((point.y === box.y || point.y === bottom) && point.x >= box.x && point.x <= right);
+}
+
+test("forward-declared nested subgraphs render their eleven declared leaf nodes", () => {
+  const svg = renderMermaidBlock(FORWARD_SUBGRAPH_SOURCE);
+
+  assert.deepEqual(nodeLabels(svg).sort(), [
+    "Cron",
+    "Invoke",
+    "Triggers",
+    "SIT blueprints",
+    "Evaluation Findings",
+    "Field Findings",
+    "SIT synthetics",
+    "Candidate Search and Promotion",
+    "Git patch",
+    "PR",
+    "Factory improvements",
+  ].sort());
+});
+
+test("links to forward-declared nested subgraphs attach to the container boundaries", () => {
+  const svg = renderMermaidBlock(FORWARD_SUBGRAPH_SOURCE);
+  const [outer, inner] = subgraphRects(svg);
+  const edges = [...svg.matchAll(
+    /<path class="mermaid-edge" d="M ([\d.-]+) ([\d.-]+) L [\d.-]+ [\d.-]+ Q [\d.-]+ [\d.-]+ ([\d.-]+) ([\d.-]+)"/g,
+  )].map((match) => ({
+    from: { x: Number(match[1]), y: Number(match[2]) },
+    to: { x: Number(match[3]), y: Number(match[4]) },
+  }));
+
+  assert.deepEqual([
+    touchesBoundary(outer, edges[0]?.to),
+    touchesBoundary(outer, edges[1]?.to),
+    touchesBoundary(inner, edges[2]?.to),
+    touchesBoundary(inner, edges[7]?.from),
+  ], [true, true, true, true]);
+});
 
 test("chained edges render one node per link instead of collapsing the tail into a label", () => {
   const svg = renderMermaidBlock(SUBGRAPH_SOURCE);

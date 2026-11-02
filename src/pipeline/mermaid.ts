@@ -6,6 +6,7 @@ type MermaidNode = {
   id: string;
   lines: string[];
   shape: NodeShape;
+  placeholder: boolean;
 };
 
 type EdgeStyle = 'solid' | 'dotted' | 'thick';
@@ -143,7 +144,7 @@ function parseNodeToken(token: string): MermaidNode | null {
   const rest = trimmed.slice(head[0].length).trim();
 
   if (!rest) {
-    return { id, lines: [id], shape: 'rect' };
+    return { id, lines: [id], shape: 'rect', placeholder: true };
   }
 
   const shapes: Array<{ open: string; close: string; shape: NodeShape }> = [
@@ -161,12 +162,12 @@ function parseNodeToken(token: string): MermaidNode | null {
     if (rest.startsWith(open) && rest.endsWith(close) && rest.length >= open.length + close.length) {
       const inner = rest.slice(open.length, rest.length - close.length);
       const lines = labelLines(inner);
-      return { id, lines: lines[0] === '' && lines.length === 1 ? [id] : lines, shape };
+      return { id, lines: lines[0] === '' && lines.length === 1 ? [id] : lines, shape, placeholder: false };
     }
   }
 
   const lines = labelLines(rest);
-  return { id, lines: lines[0] === '' && lines.length === 1 ? [id] : lines, shape: 'rect' };
+  return { id, lines: lines[0] === '' && lines.length === 1 ? [id] : lines, shape: 'rect', placeholder: false };
 }
 
 // Reads a subgraph header such as `subgraph L3[loop]`, `subgraph "Title"`, or `subgraph id`.
@@ -771,6 +772,7 @@ export function renderMermaidBlock(content: string): string {
       existing.lines = candidate.lines;
       existing.shape = candidate.shape;
     }
+    existing.placeholder = existing.placeholder && candidate.placeholder;
     // Mermaid membership is claimed by the subgraph a node appears in, regardless of edge order.
     // A node created at root scope by an earlier edge must move into a subgraph that later lists it.
     // Only a subgraph claims a root-level node. Root never pulls a node back out of a subgraph, so
@@ -868,6 +870,19 @@ export function renderMermaidBlock(content: string): string {
       const header = parseSubgraphHeader(subgraphOpen[1] ?? '', anonymousSubgraphs);
       anonymousSubgraphs += 1;
       let id = header.id;
+      // Keep forward links on the declared container ID, not on a temporary leaf.
+      if (nodes.get(id)?.placeholder) {
+        nodes.delete(id);
+        const nodeIndex = nodeOrder.indexOf(id);
+        if (nodeIndex !== -1) {
+          nodeOrder.splice(nodeIndex, 1);
+        }
+        const siblings = childList(parentOf.get(id) ?? ROOT_CONTAINER);
+        const childIndex = siblings.indexOf(id);
+        if (childIndex !== -1) {
+          siblings.splice(childIndex, 1);
+        }
+      }
       if (nodes.has(id) || subgraphs.has(id)) {
         id = `${id}-sub-${anonymousSubgraphs}`;
       }
