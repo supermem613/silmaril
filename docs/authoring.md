@@ -5,6 +5,8 @@ Silmaril turns ordinary headings into slides.
 ````markdown
 # Architecture review
 
+How requests move from the gateway to storage
+
 ## Request path
 
 1. The gateway authenticates the caller.
@@ -24,6 +26,7 @@ flowchart LR
 ## Structure
 
 - Use one optional `#` heading for the presentation title.
+- Put an optional subtitle paragraph directly below that title, before the first slide.
 - Use a `##` heading for every slide.
 - Put the slide body below its heading.
 - Repeated slide titles receive stable numbered identifiers in source order.
@@ -31,9 +34,21 @@ flowchart LR
 
 When the `#` heading is omitted, the Markdown filename becomes the title.
 
+The subtitle is the first paragraph after the title, with blank lines allowed between them. Wrapped lines in that paragraph are joined with spaces. It is plain text, like the title: Markdown formatting and HTML are displayed literally. Lists, quotes, code blocks, and headings do not become subtitles. Later preamble paragraphs are not included.
+
+The board overview shows the subtitle below the title in smaller, muted text. Long text wraps, and the overview fits the heading and slide cards without overlap. Subtitles do not change the browser title, slide count, or focused-slide view.
+
 ## Slide content
 
-Slide bodies support paragraphs, lists, tables, emphasis, local images, syntax-highlighted code, and Mermaid diagrams. Raw HTML is escaped. Local images are embedded in the HTML output. Remote links and remote images are rejected so the presentation remains self-contained.
+Slide bodies support paragraphs, lists, tables, emphasis, images, syntax-highlighted code, and Mermaid diagrams. Raw HTML is escaped. Local images are embedded in the HTML output. HTTP and HTTPS image URLs are downloaded and embedded during publish or preview, so the presentation remains self-contained. Links to websites open in a new tab.
+
+```markdown
+![Architecture](https://example.com/architecture.png)
+```
+
+Inline images and reference-style images are supported, including inside columns. Image syntax inside code remains code. Supported image types are PNG, JPEG, GIF, SVG, WebP, and AVIF. Remote servers must return a supported image `Content-Type`; a page URL that returns HTML is not an image URL. URL query strings are preserved, and redirects are followed.
+
+Each render loads a remote URL once and reuses its bytes across slides. Later renders fetch it again, so a changed remote image can change the output. A failed download, unsupported media type, or empty response stops rendering with an error. Publish leaves an existing output file unchanged if image loading fails.
 
 You can also author two equal-width columns with a copy-paste block:
 
@@ -48,6 +63,12 @@ Right column body with its own Markdown, including nested lists and code blocks.
 ```
 
 Inside a `:::columns` block, a top-level `---` is a column divider rather than a thematic break or horizontal rule. Each column can contain recursive Markdown bodies, and the layout stacks on narrow screens and print output.
+
+### Content fitting
+
+When a slide overflows, Silmaril reduces its heading, body fonts, and text spacing by one shared factor. It measures the result after text wraps and keeps the largest factor that fits the existing card. Slides that already fit keep their normal sizes. Images and diagrams shrink within the available space.
+
+Fitting runs again after content edits, image and font loads, and window size changes. Removing excess content restores normal sizes. There is no minimum font size, so very dense slides can become difficult to read. Split them into more slides for a larger font. If fixed content, such as a table's borders, cannot fit at any font size, the card scrolls instead of cropping it.
 
 ## Publish
 
@@ -87,4 +108,16 @@ const { html, slideCount } = render(markdown, {
 });
 ```
 
-`render(markdown, options)` returns `{ html, slideCount }`. The options object can include `title`, `assetBaseDir`, `version`, `repositoryUrl`, and `liveReload`. `render()` is filesystem-free and deploy-agnostic: it is the same rendering seam the CLI publish path consumes internally.
+`render(markdown, options)` synchronously returns `{ html, slideCount }` and supports local and embedded images. The options object can include `title`, `assetBaseDir`, `version`, `repositoryUrl`, and `liveReload`. Local image paths are resolved relative to `assetBaseDir`.
+
+For remote images, use the additive async API:
+
+```js
+import { renderAsync } from "silmaril";
+
+const { html, slideCount } = await renderAsync(
+  "## Diagram\n\n![Architecture](https://example.com/architecture.png)",
+);
+```
+
+`renderAsync(markdown, options)` accepts the same options and returns a Promise of `{ html, slideCount }`. CLI publish, live serve, and the Obsidian plugin await this shared path internally. Existing synchronous `render()` callers do not need to change.

@@ -1,4 +1,4 @@
-import { renderPresentationFromMarkdown } from '../../src/pipeline/renderFile.js';
+import { renderPresentationFromMarkdownAsync } from '../../src/pipeline/renderFile.js';
 
 const previewBridgeScript = `
 <script>
@@ -91,8 +91,8 @@ function addPreviewBridge(html: string): string {
   return html.replace(closingBody, `${previewBridgeScript}\n${closingBody}`);
 }
 
-export function renderDeck(markdown: string, sourcePath: string) {
-  const presentation = renderPresentationFromMarkdown(markdown, sourcePath);
+export async function renderDeck(markdown: string, sourcePath: string) {
+  const presentation = await renderPresentationFromMarkdownAsync(markdown, sourcePath);
 
   return {
     html: addPreviewBridge(presentation.html),

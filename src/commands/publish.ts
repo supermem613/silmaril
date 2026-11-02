@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, extname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { emitJsonFailure, emitJsonSuccess } from "../output.js";
-import { renderPresentationFromFile } from "../pipeline/renderFile.js";
+import { renderPresentationFromMarkdownAsync } from "../pipeline/renderFile.js";
 
 export type PublishOptions = {
   out?: string;
@@ -59,7 +59,7 @@ export async function publishCommand(input: string, opts: PublishOptions, deps: 
     const outputPath = opts.out
       ? (isAbsolute(opts.out) ? opts.out : resolve(process.cwd(), opts.out))
       : defaultOutputPath(inputPath);
-    const { html, slideCount } = renderPresentationFromFile(inputPath, {
+    const { html, slideCount } = await renderPresentationFromMarkdownAsync(readFileSync(inputPath, "utf8"), inputPath, {
       version: PACKAGE_VERSION,
       repositoryUrl: PACKAGE_REPOSITORY_URL,
     });

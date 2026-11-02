@@ -9,7 +9,7 @@ export interface RenderSchedulerOptions<TRequest, TResult> {
   readonly getRequestId: (request: TRequest) => number;
   readonly getResultRequestId: (result: TResult) => number;
   readonly saveBeforeRender: (request: TRequest) => void | Promise<void>;
-  readonly render: (request: TRequest) => void;
+  readonly render: (request: TRequest) => void | Promise<void>;
   readonly applyResult: (result: TResult) => void;
 }
 
@@ -53,7 +53,7 @@ export function createRenderScheduler<TRequest, TResult>(
           return;
         }
 
-        options.render(request);
+        await options.render(request);
       }, options.debounceMs);
     },
     complete(result) {

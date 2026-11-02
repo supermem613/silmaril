@@ -1,3 +1,13 @@
+export const engineeringSubtitleCss = `
+  .engineering-board-subtitle {
+    margin: 0.75rem 0 0;
+    color: var(--muted);
+    font-size: 1.35rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+`;
+
 export const engineeringTokensCss = `
   :root {
     --light-bg: #EEF2F3;
@@ -174,7 +184,11 @@ export const engineeringTokensCss = `
     height: auto;
     min-height: 0;
     max-height: 520px;
-    margin: 0.25rem 0;
+    margin: calc(0.25rem * var(--slide-fit, 1)) 0;
+  }
+
+  .engineering-card .engineering-mermaid {
+    max-height: calc(520px * var(--slide-fit, 1));
   }
 
   .engineering-mermaid .mermaid-subgraph {
@@ -265,7 +279,7 @@ export const engineeringTokensCss = `
   .engineering-card {
     display: flex;
     flex-direction: column;
-    gap: 1.35rem;
+    gap: calc(1.35rem * var(--slide-fit, 1));
     width: 1000px;
     min-height: 700px;
     max-height: 780px;
@@ -278,9 +292,13 @@ export const engineeringTokensCss = `
     color: var(--text);
     box-shadow: 0 18px 40px var(--shadow);
     font-family: "Segoe UI Variable Text", "Aptos", "Segoe UI", sans-serif;
-    font-size: 1.35rem;
+    font-size: calc(1.35rem * var(--slide-fit, 1));
     line-height: 1.5;
     transition: transform 240ms ease, background 180ms ease, color 180ms ease, border-color 180ms ease, box-shadow 240ms ease;
+  }
+
+  .engineering-card[data-slide-fit="overflow"] {
+    overflow: auto;
   }
 
   .engineering-card[data-theme="light"] {
@@ -378,7 +396,7 @@ export const engineeringTokensCss = `
   .engineering-card h2 {
     margin: 0;
     font-family: "Segoe UI Variable Display", "Aptos Display", "Segoe UI", sans-serif;
-    font-size: 3rem;
+    font-size: calc(3rem * var(--slide-fit, 1));
     font-weight: 650;
     letter-spacing: -0.035em;
     line-height: 1.05;
@@ -435,7 +453,7 @@ export const engineeringTokensCss = `
   .engineering-card th,
   .engineering-card td {
     border: 1px solid var(--border);
-    padding: 0.7rem 0.8rem;
+    padding: calc(0.7rem * var(--slide-fit, 1)) calc(0.8rem * var(--slide-fit, 1));
     text-align: left;
   }
 
@@ -446,7 +464,7 @@ export const engineeringTokensCss = `
 
   .engineering-card pre {
     margin: 0;
-    padding: 1rem 1.1rem;
+    padding: calc(1rem * var(--slide-fit, 1)) calc(1.1rem * var(--slide-fit, 1));
     border-radius: 0.8rem;
     background: var(--code-bg);
     color: var(--code-text);
@@ -458,20 +476,22 @@ export const engineeringTokensCss = `
     font-family: "Cascadia Code", Consolas, monospace;
     background: rgba(103, 211, 194, 0.12);
     border-radius: 0.3rem;
-    padding: 0.12rem 0.3rem;
+    padding: calc(0.12rem * var(--slide-fit, 1)) calc(0.3rem * var(--slide-fit, 1));
     color: var(--code-text);
   }
 
   .engineering-card img {
     width: 100%;
     max-width: 100%;
+    max-height: calc(var(--slide-media-height) * var(--slide-fit, 1));
+    object-fit: contain;
     border-radius: 0.8rem;
     border: 1px solid var(--border);
   }
 
   .engineering-card blockquote {
     margin: 0;
-    padding: 0.75rem 1rem;
+    padding: calc(0.75rem * var(--slide-fit, 1)) calc(1rem * var(--slide-fit, 1));
     border-left: 3px solid var(--accent);
     color: var(--muted);
     background: rgba(103, 211, 194, 0.08);
@@ -480,12 +500,12 @@ export const engineeringTokensCss = `
   .engineering-card hr {
     border: 0;
     border-top: 1px solid var(--border);
-    margin: 0.1rem 0 0.3rem;
+    margin: calc(0.1rem * var(--slide-fit, 1)) 0 calc(0.3rem * var(--slide-fit, 1));
   }
 
   .columns {
     display: flex;
-    gap: 1.25rem;
+    gap: calc(1.25rem * var(--slide-fit, 1));
   }
 
   .columns > .column {

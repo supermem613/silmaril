@@ -1,4 +1,5 @@
 import MarkdownIt from "markdown-it";
+import type Token from "markdown-it/lib/token.mjs";
 import hljs from "highlight.js";
 import { parseMarkdownSegments } from "./columns.js";
 import { renderMermaidBlock } from "./mermaid.js";
@@ -39,7 +40,7 @@ function classifyHref(href: string): ClassifiedHref {
   return { kind: "none" };
 }
 
-function createMarkdownRenderer(): MarkdownIt {
+function createMarkdownRenderer(resolveImage?: (source: string) => string): MarkdownIt {
   const markdownIt = new MarkdownIt(DEFAULT_RENDERER_OPTIONS);
 
   markdownIt.renderer.rules.code_inline = (tokens, index) => {
@@ -86,7 +87,8 @@ function createMarkdownRenderer(): MarkdownIt {
   markdownIt.renderer.rules.image = (tokens, index) => {
     const token = tokens[index];
     const altText = token?.content || (typeof token?.attrGet === "function" ? token.attrGet("alt") : "") || "";
-    const source = typeof token?.attrGet === "function" ? token.attrGet("src") : "";
+    const reference = typeof token?.attrGet === "function" ? token.attrGet("src") : "";
+    const source = reference && resolveImage ? resolveImage(reference) : reference;
     if (source && /^data:image\/(?:png|jpeg|gif|svg\+xml|webp|avif);base64,[a-z\d+/=]+$/i.test(source)) {
       return `<img src="${escapeHtml(source)}" alt="${escapeHtml(String(altText))}">`;
     }
@@ -127,21 +129,76 @@ function renderCodeBlock(content: string, language: string): string {
   }
 }
 
-function renderSegments(markdown: string, renderer: MarkdownIt): string {
+type ParsedSegment =
+  | { type: "text"; tokens: Token[]; environment: Record<string, unknown> }
+  | { type: "columns"; columns: ParsedSegment[][] };
+
+function parseSegments(markdown: string, renderer: MarkdownIt): ParsedSegment[] {
   return parseMarkdownSegments(markdown)
     .map((segment) => {
       if (segment.type === "columns") {
-        const columns = segment.content
-          .map((columnBody) => `<div class="column">${renderSegments(columnBody, renderer)}</div>`)
-          .join("");
-        return `<div class="columns">${columns}</div>`;
+        return { type: "columns", columns: segment.content.map((body) => parseSegments(body, renderer)) };
       }
 
-      return renderer.render(segment.content);
-    })
+      const environment = {};
+      return { type: "text", tokens: renderer.parse(segment.content, environment), environment };
+    });
+}
+
+function renderSegments(segments: ParsedSegment[], renderer: MarkdownIt): string {
+  return segments.map((segment) => {
+    if (segment.type === "columns") {
+      const columns = segment.columns
+        .map((column) => `<div class="column">${renderSegments(column, renderer)}</div>`)
+        .join("");
+      return `<div class="columns">${columns}</div>`;
+    }
+    return renderer.renderer.render(segment.tokens, renderer.options, segment.environment);
+  })
     .join("");
 }
 
-export function renderMarkdown(markdown: string): string {
-  return renderSegments(markdown, createMarkdownRenderer());
+function* imageTokens(tokens: Token[]): Generator<Token> {
+  for (const token of tokens) {
+    if (token.type === "image") {
+      yield token;
+    } else if (token.children) {
+      yield* imageTokens(token.children);
+    }
+  }
+}
+
+async function resolveImages(
+  segments: ParsedSegment[],
+  resolveImage: (source: string) => Promise<string>,
+): Promise<void> {
+  for (const segment of segments) {
+    if (segment.type === "columns") {
+      for (const column of segment.columns) {
+        await resolveImages(column, resolveImage);
+      }
+    } else {
+      for (const token of imageTokens(segment.tokens)) {
+        const source = token.attrGet("src");
+        if (source) {
+          token.attrSet("src", await resolveImage(source));
+        }
+      }
+    }
+  }
+}
+
+export function renderMarkdown(markdown: string, resolveImage?: (source: string) => string): string {
+  const renderer = createMarkdownRenderer(resolveImage);
+  return renderSegments(parseSegments(markdown, renderer), renderer);
+}
+
+export async function renderMarkdownAsync(
+  markdown: string,
+  resolveImage: (source: string) => Promise<string>,
+): Promise<string> {
+  const renderer = createMarkdownRenderer();
+  const segments = parseSegments(markdown, renderer);
+  await resolveImages(segments, resolveImage);
+  return renderSegments(segments, renderer);
 }

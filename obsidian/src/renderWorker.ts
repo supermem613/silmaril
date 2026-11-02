@@ -26,9 +26,9 @@ interface WorkerSurface {
 
 const worker = globalThis as unknown as WorkerSurface;
 
-worker.onmessage = ({ data }) => {
+worker.onmessage = async ({ data }) => {
   try {
-    const rendered = renderDeck(data.markdown, data.sourcePath);
+    const rendered = await renderDeck(data.markdown, data.sourcePath);
     worker.postMessage({
       requestId: data.requestId,
       ok: true,

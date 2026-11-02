@@ -123,3 +123,22 @@ test('save completes before render, bursts coalesce, stale results are suppresse
   await assert.rejects(failingTimer.advance(25), (error) => error === sentinel);
   assert.equal(failedRenderCount, 0);
 });
+
+test('an asynchronous render failure rejects the scheduled cycle', async () => {
+  const fakeTimer = createFakeTimer();
+  const failure = new Error('Image fetch failed');
+  const scheduler = createRenderScheduler<Request, Result>({
+    timer: fakeTimer.timer,
+    debounceMs: 25,
+    getRequestId: (request) => request.id,
+    getResultRequestId: (result) => result.requestId,
+    saveBeforeRender: () => undefined,
+    render: async () => {
+      throw failure;
+    },
+    applyResult: () => undefined,
+  });
+  scheduler.enqueue({ id: 1, content: 'image' });
+
+  await assert.rejects(fakeTimer.advance(25), (error) => error === failure);
+});

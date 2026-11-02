@@ -40,6 +40,9 @@ editor and updates after the file saves.
 Moving the editor cursor onto a slide navigates the preview to that slide, so
 scrolling through the Markdown walks the deck alongside it. A cursor above the
 first `##` heading shows the board overview.
+HTTP and HTTPS images, such as `![Diagram](https://example.com/diagram.png)`,
+are downloaded and embedded before the preview appears. A download failure is
+reported as a preview error. Image syntax in code examples remains code.
 Returning focus to the same note keeps the current preview in place.
 Switching to a different note re-renders it, and saved edits still update the
 preview. Refreshes keep the current slide when it still exists in the updated
@@ -52,6 +55,8 @@ single self-contained HTML file. This is the same offline deck that
 `silmaril publish` produces, with no live-preview scripting. When your platform
 offers a native save dialog you choose the location. Otherwise the file is
 written beside the note as `<note>.html`.
+Remote images are embedded during publish, so the saved deck works offline.
+Publishing fails before writing the file if an image cannot be loaded.
 
 ## Security decision
 
