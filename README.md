@@ -5,6 +5,8 @@ Silmaril is a trivial, no-frills Markdown-to-slides pipeline for engineers: writ
 ```markdown
 # Service rollout
 
+The plan for the final traffic cohort
+
 ## Current state
 
 The new API serves 80% of traffic.
@@ -22,9 +24,13 @@ node dist/cli.js publish talk.md --out talk.html
 
 The `#` heading is the presentation title. Each `##` heading starts a slide. If the title is omitted, Silmaril uses the Markdown filename. The output opens on the whole board, works offline, and contains its scripts, styles, local images, and Mermaid diagrams.
 
+The first paragraph directly below the `#` title is an optional plain-text subtitle. It appears below the title on the board overview, not on individual slides.
+
 ## Present
 
 Use the arrow keys to move between slides. Focused-slide mode shows only the active slide with quiet edge cues for available previous and next slides. The board shows `silmaril · <version>` in the lower-right corner.
+
+Dense slides reduce font sizes and text spacing together until their content fits. Slides that already fit keep their normal sizes. If fixed content cannot fit, the card scrolls instead of silently cropping it.
 
 ## Edit with live reload
 
@@ -62,7 +68,19 @@ const { html, slideCount } = render(markdown, {
 console.log(slideCount);
 ```
 
-`render(markdown, options)` returns `{ html, slideCount }`. The `options` object can set `title`, `assetBaseDir`, `version`, `repositoryUrl`, or `liveReload`. `render()` is filesystem-free and deploy-agnostic: it is the same rendering seam the CLI publish path consumes internally.
+`render(markdown, options)` synchronously returns `{ html, slideCount }` and supports local and embedded images. The `options` object can set `title`, `assetBaseDir`, `version`, `repositoryUrl`, or `liveReload`. Local image paths are resolved relative to `assetBaseDir`.
+
+Use `renderAsync` when the Markdown contains HTTP or HTTPS image URLs:
+
+```js
+import { renderAsync } from "silmaril";
+
+const { html, slideCount } = await renderAsync(
+  "## Diagram\n\n![Architecture](https://example.com/architecture.png)",
+);
+```
+
+`renderAsync(markdown, options)` accepts the same options and returns a Promise of `{ html, slideCount }`. It downloads remote images and embeds their bytes, so the resulting HTML works offline. CLI publish, live serve, and the Obsidian plugin use this async path internally. Image download failures stop rendering rather than producing a deck with missing images.
 
 ## Obsidian plugin
 

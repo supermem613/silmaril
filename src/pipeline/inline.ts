@@ -56,27 +56,73 @@ function inferMimeType(resolvedPath: string): string {
 }
 
 function resolveAssetPath(reference: string, baseDirectory: string): string {
-  const normalizedReference = normalizeReference(reference);
-  if (isAbsolute(normalizedReference)) {
-    return normalizedReference;
+  const assetPath = decodeURIComponent(normalizeReference(reference));
+  if (isAbsolute(assetPath)) {
+    return assetPath;
   }
 
-  return resolve(baseDirectory, normalizedReference);
+  return resolve(baseDirectory, assetPath);
+}
+
+export function inlineImage(reference: string, baseDirectory: string): string {
+  if (/^data:image\/(?:png|jpeg|gif|svg\+xml|webp|avif);base64,[a-z\d+/=]+$/i.test(reference)) {
+    return reference;
+  }
+
+  const normalizedReference = normalizeReference(reference);
+  if (isRemoteReference(normalizedReference)) {
+    throw new Error(`Remote asset reference is not allowed: ${normalizedReference}`);
+  }
+
+  const resolvedPath = resolveAssetPath(normalizedReference, baseDirectory);
+  const assetBytes = readFileSync(resolvedPath);
+  return `data:${inferMimeType(resolvedPath)};base64,${assetBytes.toString('base64')}`;
+}
+
+async function fetchImage(reference: string): Promise<string> {
+  try {
+    const response = await fetch(reference);
+    if (!response.ok) {
+      await response.body?.cancel();
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const mimeType = (response.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+    if (!/^image\/(?:png|jpeg|gif|svg\+xml|webp|avif)$/.test(mimeType)) {
+      await response.body?.cancel();
+      throw new Error(`unsupported image media type ${mimeType || "(missing)"}`);
+    }
+
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (bytes.length === 0) {
+      throw new Error("empty image response");
+    }
+    return `data:${mimeType};base64,${bytes.toString("base64")}`;
+  } catch (error) {
+    throw new Error(`Unable to load image ${reference}: ${error instanceof Error ? error.message : String(error)}`, {
+      cause: error,
+    });
+  }
+}
+
+export function createAsyncImageResolver(baseDirectory: string): (source: string) => Promise<string> {
+  const images = new Map<string, Promise<string>>();
+  return (source) => {
+    let image = images.get(source);
+    if (!image) {
+      image = /^https?:\/\//i.test(source)
+        ? fetchImage(source)
+        : Promise.resolve().then(() => inlineImage(source, baseDirectory));
+      images.set(source, image);
+    }
+    return image;
+  };
 }
 
 export function inlineMarkdown(markdown: string, baseDirectory = process.cwd()): InlineResult {
   const imagePattern = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g;
   const updatedMarkdown = markdown.replace(imagePattern, (_fullMatch, altText, reference) => {
-    const normalizedReference = normalizeReference(reference);
-
-    if (isRemoteReference(normalizedReference)) {
-      throw new Error(`Remote asset reference is not allowed: ${normalizedReference}`);
-    }
-
-    const resolvedPath = resolveAssetPath(normalizedReference, baseDirectory);
-    const assetBytes = readFileSync(resolvedPath);
-    const dataUri = `data:${inferMimeType(resolvedPath)};base64,${assetBytes.toString('base64')}`;
-    return `![${altText}](${dataUri})`;
+    return `![${altText}](${inlineImage(reference, baseDirectory)})`;
   });
 
   return { markdown: updatedMarkdown };

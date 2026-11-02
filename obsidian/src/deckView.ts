@@ -137,10 +137,10 @@ export class SilmarilDeckView extends ItemView {
           throw error;
         }
       },
-      render: (request) => {
+      render: async (request) => {
         try {
           const sourcePath = this.getSourcePath(request.view);
-          const rendered = renderDeck(request.view.editor.getValue(), sourcePath);
+          const rendered = await renderDeck(request.view.editor.getValue(), sourcePath);
           this.scheduler.complete({
             requestId: request.requestId,
             html: rendered.html,

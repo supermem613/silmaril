@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { renderTemplate, type TemplateStep } from "../pipeline/template.js";
+import { engineeringFitScript } from "./fit.js";
 import { engineeringLiveReloadScript } from "./livereload.js";
-import { engineeringTokensCss } from "./tokens.css.js";
+import { engineeringSubtitleCss, engineeringTokensCss } from "./tokens.css.js";
 import {
   engineeringNavigationScript,
   engineeringProgressMarkup,
@@ -17,6 +18,7 @@ export interface PresentationSlide {
 
 export interface PresentationOptions {
   readonly documentTitle: string;
+  readonly documentSubtitle?: string;
   readonly version?: string;
   readonly repositoryUrl?: string;
   readonly liveReload?: boolean;
@@ -64,14 +66,34 @@ function layoutSlides(slides: readonly PresentationSlide[]): SlidePlacement[] {
   });
 }
 
-function createOverviewStep(placements: readonly SlidePlacement[], content: string): TemplateStep {
+function subtitleLayoutScript(boardHeight: number): string {
+  // Measure wrapping before impress caches the overview transform. Focused
+  // slides must keep their original camera positions and scales.
+  return `<script>
+    (function () {
+      var overview = document.querySelector('.engineering-board-overview');
+      var heading = overview.querySelector('.engineering-board-title');
+      var scale = Number(overview.dataset.scale || 1);
+      var reservedHeight = heading.offsetHeight + heading.offsetTop * 2;
+      var fit = Math.min(1, overview.clientHeight / (reservedHeight + ${boardHeight} / scale));
+      heading.style.transformOrigin = 'top left';
+      heading.style.transform = 'scale(' + fit + ')';
+      heading.style.top = (heading.offsetTop * fit) + 'px';
+      overview.dataset.scale = String(scale / fit);
+      overview.dataset.y = String(Number(overview.dataset.y) - reservedHeight * scale / 2);
+    })();
+  </script>`;
+}
+
+function createOverviewStep(placements: readonly SlidePlacement[], content: string, hasSubtitle: boolean): TemplateStep {
   const xValues = placements.map((placement) => placement.x);
   const yValues = placements.map((placement) => placement.y);
   const minX = placements.length > 0 ? Math.min(...xValues) : 0;
   const maxX = placements.length > 0 ? Math.max(...xValues) : 0;
   const minY = placements.length > 0 ? Math.min(...yValues) : 0;
   const maxY = placements.length > 0 ? Math.max(...yValues) : 0;
-  const scale = Math.max(1, (maxX - minX + 1200) / 1024, (maxY - minY + 800) / 768);
+  const boardHeight = maxY - minY + 800;
+  const scale = Math.max(1, (maxX - minX + 1200) / 1024, boardHeight / 768);
 
   return {
     id: "overview",
@@ -79,7 +101,7 @@ function createOverviewStep(placements: readonly SlidePlacement[], content: stri
     y: (minY + maxY) / 2,
     z: 0,
     scale: Number(scale.toFixed(4)),
-    content,
+    content: hasSubtitle ? content + subtitleLayoutScript(boardHeight) : content,
     className: "camera-overview engineering-board-overview",
     style: OVERVIEW_STYLE,
   };
@@ -92,12 +114,13 @@ export function buildPresentation(
   const placements = layoutSlides(slides);
   const overviewContent = `
       <div class="engineering-board-title">
-        <h1>${escapeHtml(options.documentTitle)}</h1>
+        <h1>${escapeHtml(options.documentTitle)}</h1>${options.documentSubtitle ? `
+        <p class="engineering-board-subtitle">${escapeHtml(options.documentSubtitle)}</p>` : ""}
       </div>
       ${buildSignature(options.version, options.repositoryUrl)}
   `;
   const steps: TemplateStep[] = [
-    createOverviewStep(placements, overviewContent),
+    createOverviewStep(placements, overviewContent, Boolean(options.documentSubtitle)),
     ...slides.map((slide, index) => ({
       id: slide.id,
       x: placements[index].x,
@@ -112,13 +135,13 @@ export function buildPresentation(
     })),
   ];
   const liveReloadBlock = options.liveReload ? engineeringLiveReloadScript : "";
-  const scenery = `${engineeringToggleMarkup()}${engineeringProgressMarkup()}${liveReloadBlock}${engineeringToggleScript}${engineeringNavigationScript}`;
+  const scenery = `${engineeringToggleMarkup()}${engineeringProgressMarkup()}${liveReloadBlock}${engineeringToggleScript}${engineeringNavigationScript}${engineeringFitScript}`;
 
   return renderTemplate({
     title: options.documentTitle,
     bodyClass: "engineering-theme",
     viewport: "width=device-width, initial-scale=1",
-    css: engineeringTokensCss,
+    css: options.documentSubtitle ? engineeringTokensCss + engineeringSubtitleCss : engineeringTokensCss,
     scenery,
     impressAttributes: {
       width: 1120,

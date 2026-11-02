@@ -4,7 +4,7 @@ import { readFileSync, unwatchFile, watchFile } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { emitJsonFailure, emitJsonSuccess } from "../output.js";
-import { renderPresentationFromMarkdown } from "../pipeline/renderFile.js";
+import { renderPresentationFromMarkdownAsync } from "../pipeline/renderFile.js";
 
 export type ServeOptions = {
   port?: number;
@@ -86,8 +86,8 @@ export function createServeServer(input: string, options: ServeServerOptions = {
   };
   watchFile(inputPath, { interval: watchInterval }, watchListener);
 
-  const renderPage = (): string => {
-    const { html } = renderPresentationFromMarkdown(lastKnownContent, inputPath, {
+  const renderPage = async (): Promise<string> => {
+    const { html } = await renderPresentationFromMarkdownAsync(lastKnownContent, inputPath, {
       version: options.version,
       repositoryUrl: options.repositoryUrl,
       liveReload: true,
@@ -95,14 +95,14 @@ export function createServeServer(input: string, options: ServeServerOptions = {
     return html;
   };
 
-  const server = createServer((request, response) => {
+  const server = createServer(async (request, response) => {
     const method = request.method ?? "GET";
     const url = request.url ?? "/";
 
     if (method === "GET" && (url === "/" || url.startsWith("/?"))) {
       let html: string;
       try {
-        html = renderPage();
+        html = await renderPage();
       } catch (error) {
         response.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
         response.end(error instanceof Error ? error.message : String(error));

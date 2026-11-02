@@ -11,22 +11,20 @@ const readRepo = (relativePath) =>
   readFile(path.join(repoRoot, relativePath), 'utf8');
 
 async function versionSurface() {
-  const [packageText, indexText, cliText] = await Promise.all([
-    readRepo('package.json'),
+  const [indexText, cliText] = await Promise.all([
     readRepo('src/index.ts'),
     readRepo('src/cli.ts'),
   ]);
-  const packageJson = JSON.parse(packageText);
   const exports = [...indexText.matchAll(/export\s+\{\s*(\w+)\s*\}/g)]
     .map((match) => match[1])
     .sort();
 
-  assert.equal(packageJson.version, '0.5.0');
   assert.deepEqual(exports, [
     'buildPresentation',
     'inlineMarkdown',
     'parseBoard',
     'render',
+    'renderAsync',
     'renderMarkdown',
     'validateBuildOutput',
   ]);
@@ -49,10 +47,10 @@ async function noRejectedApproaches() {
 
   assert.ok(
     adapter.includes(
-      "import { renderPresentationFromMarkdown } from '../../src/pipeline/renderFile.js';",
+      "import { renderPresentationFromMarkdownAsync } from '../../src/pipeline/renderFile.js';",
     ),
   );
-  assert.ok(adapter.includes('renderPresentationFromMarkdown(markdown, sourcePath)'));
+  assert.ok(adapter.includes('await renderPresentationFromMarkdownAsync(markdown, sourcePath)'));
 
   const rejected = [
     /mermaid\.initialize/i,

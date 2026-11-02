@@ -2,7 +2,7 @@ import { FileSystemAdapter, MarkdownView, Notice, Plugin } from 'obsidian';
 import { writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { SILMARIL_VIEW_TYPE, SilmarilDeckView } from './deckView.js';
-import { renderPresentationFromMarkdown } from '../../src/pipeline/renderFile.js';
+import { renderPresentationFromMarkdownAsync } from '../../src/pipeline/renderFile.js';
 
 interface ElectronSaveDialog {
   showSaveDialog(options: {
@@ -113,7 +113,7 @@ export default class SilmarilPlugin extends Plugin {
       // that talks to the Obsidian parent frame, which a saved file must never
       // carry, so this renders directly instead.
       const sourcePath = adapter.getFullPath(view.file.path);
-      const { html } = renderPresentationFromMarkdown(view.editor.getValue(), sourcePath);
+      const { html } = await renderPresentationFromMarkdownAsync(view.editor.getValue(), sourcePath);
 
       const defaultName = `${view.file.basename}.html`;
       const savedPath = await this.writePublishedDeck(

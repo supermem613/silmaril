@@ -37,4 +37,21 @@ describe("parseBoard", () => {
   it("uses the filename when the document has no title", () => {
     assert.equal(parseBoard("## Intro\nBody", "system-design").title, "system-design");
   });
+
+  it("reads only the first paragraph after the deck title as a plain-text subtitle", () => {
+    const board = parseBoard([
+      "# Architecture review",
+      "",
+      "Request paths, **storage**,",
+      "and recovery",
+      "",
+      "Other preamble text",
+      "",
+      "## Request path",
+      "",
+      "Slide body",
+    ].join("\r\n"));
+
+    assert.equal(board.subtitle, "Request paths, **storage**, and recovery");
+  });
 });

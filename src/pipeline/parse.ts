@@ -1,4 +1,7 @@
+import MarkdownIt from "markdown-it";
 import type { BoardIR, SlideIR } from "./types.js";
+
+const metadataMarkdown = new MarkdownIt({ html: true });
 
 export function parseBoard(markdown: string, fallbackTitle = "Presentation"): BoardIR {
   const title = parseTitle(markdown) ?? fallbackTitle;
@@ -6,6 +9,7 @@ export function parseBoard(markdown: string, fallbackTitle = "Presentation"): Bo
     id: slugify(title),
     rawMarkdown: markdown,
     title,
+    subtitle: parseSubtitle(markdown),
     slides: parseSlides(markdown),
   };
 }
@@ -18,6 +22,27 @@ function parseTitle(markdown: string): string | null {
     }
   }
   return null;
+}
+
+function parseSubtitle(markdown: string): string | undefined {
+  const lines = markdown.split(/\r?\n/);
+  const tokens = metadataMarkdown.parse(markdown, {});
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (token.type !== "heading_open" || token.level !== 0 || !token.map) {
+      continue;
+    }
+    const heading = lines[token.map[0]];
+    if (/^##\s+/.test(heading)) {
+      return undefined;
+    }
+    if (/^#\s+/.test(heading)) {
+      return tokens[index + 3]?.type === "paragraph_open"
+        ? tokens[index + 4].content.replace(/\s*\n\s*/g, " ").trim() || undefined
+        : undefined;
+    }
+  }
+  return undefined;
 }
 
 export interface SlideRange {
