@@ -29,9 +29,20 @@ test('initializes the generated deck with an offline image through the productio
   await new Promise((resolve) => imageServer.listen(0, '127.0.0.1', resolve));
   const { port } = imageServer.address();
   const source = (await readFile(sourcePath, 'utf8')).replace(/^(# .+)$/m, `$1\n\n${subtitle}`);
-  const markdown = `${source}\n\n## Remote image\n\n![Offline image](http://127.0.0.1:${port}/image)`;
-  const { html } = await renderDeck(markdown, sourcePath);
+  const imageDirectory = await mkdtemp(path.join(tmpdir(), 'silmaril-vault-images-'));
+  t.after(() => rm(imageDirectory, { recursive: true, force: true }));
+  await writeFile(path.join(imageDirectory, 'Pasted image.png'), Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    'base64',
+  ));
+  await writeFile(path.join(imageDirectory, 'Diagram.svg'), image);
+  const resolveWikiImage = (reference) => encodeURIComponent(
+    path.relative(path.dirname(sourcePath), path.join(imageDirectory, reference)),
+  );
+  const markdown = `${source}\n\n## Remote image\n\n![Offline image](http://127.0.0.1:${port}/image)\n\n## Vault images\n\n![[Pasted image.png]]\n\n![[Diagram.svg|200x100]]`;
+  const { html } = await renderDeck(markdown, sourcePath, resolveWikiImage);
   await closeImageServer();
+  await rm(imageDirectory, { recursive: true, force: true });
   const previewDirectory = await mkdtemp(
     path.join(tmpdir(), 'silmaril-preview-transport-'),
   );
@@ -98,6 +109,24 @@ test('initializes the generated deck with an offline image through the productio
       return { width: image.naturalWidth, height: image.naturalHeight };
     });
     assert.deepEqual(imageSize, { width: 4, height: 4 });
+    await childFrame.waitForFunction(() => ['Pasted image.png', 'Diagram.svg'].every((alt) => {
+      const image = document.querySelector(`img[alt="${alt}"]`);
+      return image?.complete && image.naturalWidth > 0;
+    }));
+    const vaultImages = await childFrame.evaluate(() => ['Pasted image.png', 'Diagram.svg'].map((alt) => {
+      const image = document.querySelector(`img[alt="${alt}"]`);
+      return {
+        alt,
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+        displayWidth: image.getAttribute('width'),
+        displayHeight: image.getAttribute('height'),
+      };
+    }));
+    assert.deepEqual(vaultImages, [
+      { alt: 'Pasted image.png', width: 1, height: 1, displayWidth: null, displayHeight: null },
+      { alt: 'Diagram.svg', width: 4, height: 4, displayWidth: '200', displayHeight: '100' },
+    ]);
     const heading = await childFrame.evaluate(() => ({
       subtitle: document.querySelector('#overview .engineering-board-subtitle').textContent,
       bottom: document.querySelector('.engineering-board-title').getBoundingClientRect().bottom,

@@ -1,4 +1,21 @@
 import { renderPresentationFromMarkdownAsync } from '../../src/pipeline/renderFile.js';
+import { dirname, relative } from 'node:path';
+import type { FileSystemAdapter, MetadataCache } from 'obsidian';
+
+export function createWikiImageResolver(
+  metadataCache: Pick<MetadataCache, 'getFirstLinkpathDest'>,
+  adapter: Pick<FileSystemAdapter, 'getFullPath'>,
+  sourceVaultPath: string,
+): (reference: string) => string {
+  const directory = dirname(adapter.getFullPath(sourceVaultPath));
+  return (reference) => {
+    const image = metadataCache.getFirstLinkpathDest(reference, sourceVaultPath);
+    if (image === null) {
+      throw new Error(`Unable to find image "${reference}" from "${sourceVaultPath}".`);
+    }
+    return encodeURIComponent(relative(directory, adapter.getFullPath(image.path)));
+  };
+}
 
 const previewBridgeScript = `
 <script>
@@ -91,8 +108,12 @@ function addPreviewBridge(html: string): string {
   return html.replace(closingBody, `${previewBridgeScript}\n${closingBody}`);
 }
 
-export async function renderDeck(markdown: string, sourcePath: string) {
-  const presentation = await renderPresentationFromMarkdownAsync(markdown, sourcePath);
+export async function renderDeck(
+  markdown: string,
+  sourcePath: string,
+  resolveWikiImage?: (source: string) => string,
+) {
+  const presentation = await renderPresentationFromMarkdownAsync(markdown, sourcePath, { resolveWikiImage });
 
   return {
     html: addPreviewBridge(presentation.html),

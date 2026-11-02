@@ -5,7 +5,7 @@ import {
   Notice,
   WorkspaceLeaf,
 } from 'obsidian';
-import { renderDeck } from './renderAdapter.js';
+import { createWikiImageResolver, renderDeck } from './renderAdapter.js';
 import {
   createRenderScheduler,
   RenderScheduler,
@@ -139,8 +139,14 @@ export class SilmarilDeckView extends ItemView {
       },
       render: async (request) => {
         try {
-          const sourcePath = this.getSourcePath(request.view);
-          const rendered = await renderDeck(request.view.editor.getValue(), sourcePath);
+          const file = request.view.file;
+          if (file === null) {
+            throw new Error('The active Markdown editor is not backed by a vault file.');
+          }
+          const adapter = this.getFileSystemAdapter();
+          const sourcePath = adapter.getFullPath(file.path);
+          const resolveWikiImage = createWikiImageResolver(this.app.metadataCache, adapter, file.path);
+          const rendered = await renderDeck(request.view.editor.getValue(), sourcePath, resolveWikiImage);
           this.scheduler.complete({
             requestId: request.requestId,
             html: rendered.html,
@@ -472,14 +478,6 @@ export class SilmarilDeckView extends ItemView {
     if (this.lastRenderedSourceView === request.view) {
       this.lastRenderedSourceView = null;
     }
-  }
-
-  private getSourcePath(view: MarkdownView): string {
-    if (view.file === null) {
-      throw new Error('The active Markdown editor is not backed by a vault file.');
-    }
-
-    return this.getFileSystemAdapter().getFullPath(view.file.path);
   }
 
   private getFileSystemAdapter(): FileSystemAdapter {

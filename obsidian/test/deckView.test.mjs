@@ -1,14 +1,22 @@
 import assert from 'node:assert/strict';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import test from 'node:test';
 import { build } from 'esbuild';
+import { chromium } from 'playwright';
 
 const buildDirectory = new URL('../.build/', import.meta.url);
 const harnessUrl = new URL('deckViewHarness.mjs', buildDirectory);
 
 const obsidianMock = `
 export class FileSystemAdapter {}
+export class Plugin {
+  constructor(app) {
+    this.app = app;
+  }
+}
 export class ItemView {
   constructor(leaf) {
     this.app = leaf.app;
@@ -41,7 +49,8 @@ await build({
     contents: `
       import { FileSystemAdapter } from 'obsidian';
       import { SilmarilDeckView, slideStateForCursorLine } from './src/deckView.ts';
-      export { FileSystemAdapter, SilmarilDeckView, slideStateForCursorLine };
+      import SilmarilPlugin from './src/main.ts';
+      export { FileSystemAdapter, SilmarilDeckView, slideStateForCursorLine, SilmarilPlugin };
     `,
     loader: 'ts',
     resolveDir: fileURLToPath(new URL('..', import.meta.url)),
@@ -66,7 +75,7 @@ await build({
   ],
 });
 
-const { FileSystemAdapter, SilmarilDeckView, slideStateForCursorLine } =
+const { FileSystemAdapter, SilmarilDeckView, slideStateForCursorLine, SilmarilPlugin } =
   await import(
     `${pathToFileURL(fileURLToPath(harnessUrl)).href}?test=${Date.now()}`
   );
@@ -171,7 +180,7 @@ async function pollFor(label, condition) {
   assert.fail(`Timed out waiting for ${label}.`);
 }
 
-test('refreshes after paint, restores the active slide, and keeps focus changes on the loaded deck', async () => {
+test('refreshes after paint, restores the active slide, and keeps focus changes on the loaded deck', async (t) => {
   const scheduled = new Map();
   const navigations = [];
   const windowHandlers = new Map();
@@ -254,6 +263,13 @@ test('refreshes after paint, restores the active slide, and keeps focus changes 
   };
 
   const adapter = new TestAdapter();
+  const directory = await mkdtemp(join(tmpdir(), 'silmaril-view-images-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  adapter.getFullPath = (path) => join(directory, path);
+  const image = '<svg xmlns="http://www.w3.org/2000/svg"/>';
+  await mkdir(join(directory, 'attachments'));
+  await writeFile(join(directory, 'attachments', 'Pasted image.svg'), image);
+  const imageLookups = [];
   const workspace = createWorkspace();
   let sourceView = createSourceView('deck.md', '# Deck\n\n## First\n\nContent');
   const leaf = {
@@ -263,6 +279,12 @@ test('refreshes after paint, restores the active slide, and keeps focus changes 
         configDir: '.obsidian',
       },
       workspace,
+      metadataCache: {
+        getFirstLinkpathDest(reference, source) {
+          imageLookups.push([reference, source]);
+          return { path: 'attachments/Pasted image.svg' };
+        },
+      },
     },
     contentEl,
   };
@@ -387,8 +409,61 @@ test('refreshes after paint, restores the active slide, and keeps focus changes 
     slideIndex: 2,
   });
 
+  sourceView = createSourceView('slides/image.md', '# Images\n\n## Image\n\n![[Pasted image.svg]]');
+  workspace.emit('active-leaf-change');
+  await runScheduledRender();
+  await pollFor('the native-image preview navigation', () => navigations.length === 6);
+  const expectedImage = `<img src="data:image/svg+xml;base64,${Buffer.from(image).toString('base64')}" alt="Pasted image.svg">`;
+  assert.ok([...adapter.files.values()].some((html) => html.includes(expectedImage)));
+  assert.deepEqual(imageLookups, [['Pasted image.svg', 'slides/image.md']]);
+
   await view.onClose();
   assert.deepEqual(globalThis.__silmarilNotices, []);
+});
+
+test('publishes native vault images that decode after the attachment is removed', async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), 'silmaril-publish-images-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const image = '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4" fill="red"/></svg>';
+  await mkdir(join(directory, 'attachments'));
+  const imagePath = join(directory, 'attachments', 'Pasted image.svg');
+  await writeFile(imagePath, image);
+  const adapter = new TestAdapter();
+  adapter.getFullPath = (path) => join(directory, path);
+  const sourceView = createSourceView('talks/deck.md', '# Deck\n\n## Image\n\n![[Pasted image.svg]]');
+  sourceView.file.basename = 'deck';
+  const lookups = [];
+  globalThis.__silmarilNotices = [];
+  globalThis.window = {};
+  const plugin = new SilmarilPlugin({
+    vault: { adapter },
+    workspace: { getActiveViewOfType: () => sourceView },
+    metadataCache: {
+      getFirstLinkpathDest(reference, source) {
+        lookups.push([reference, source]);
+        return { path: 'attachments/Pasted image.svg' };
+      },
+    },
+  });
+
+  await plugin.publishHtml();
+  const html = adapter.files.get('talks/deck.html');
+  assert.ok(html.includes(`<img src="data:image/svg+xml;base64,${Buffer.from(image).toString('base64')}" alt="Pasted image.svg">`));
+  assert.deepEqual(lookups, [['Pasted image.svg', 'talks/deck.md']]);
+  assert.deepEqual(globalThis.__silmarilNotices, ['Silmaril published to talks/deck.html']);
+  await rm(imagePath);
+  const browser = await chromium.launch({ channel: 'msedge', headless: true });
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  await page.setContent(html);
+  await page.waitForFunction(() => {
+    const image = document.querySelector('img[alt="Pasted image.svg"]');
+    return image?.complete && image.naturalWidth > 0;
+  });
+  assert.deepEqual(await page.evaluate(() => {
+    const image = document.querySelector('img[alt="Pasted image.svg"]');
+    return { width: image.naturalWidth, height: image.naturalHeight };
+  }), { width: 4, height: 4 });
 });
 
 test('maps a cursor line to the slide that owns it', () => {

@@ -13,6 +13,7 @@ export interface RenderOptions {
   readonly version?: string;
   readonly repositoryUrl?: string;
   readonly liveReload?: boolean;
+  readonly resolveWikiImage?: (source: string) => string;
 }
 
 export type RenderPresentationOptions = RenderOptions;
@@ -43,7 +44,11 @@ export function render(markdown: string, options: RenderOptions = {}): RenderedP
   const slides = board.slides.map((slide) => ({
     id: slide.id,
     title: slide.title,
-    content: renderMarkdown(slide.body, (source) => inlineImage(source, options.assetBaseDir ?? process.cwd())),
+    content: renderMarkdown(
+      slide.body,
+      (source) => inlineImage(source, options.assetBaseDir ?? process.cwd()),
+      options.resolveWikiImage,
+    ),
   }));
   return assemblePresentation(board, slides, options);
 }
@@ -56,7 +61,7 @@ export async function renderAsync(markdown: string, options: RenderOptions = {})
     slides.push({
       id: slide.id,
       title: slide.title,
-      content: await renderMarkdownAsync(slide.body, resolveImage),
+      content: await renderMarkdownAsync(slide.body, resolveImage, options.resolveWikiImage),
     });
   }
   return assemblePresentation(board, slides, options);
@@ -73,6 +78,7 @@ export function renderPresentationFromMarkdown(
     version: options.version,
     repositoryUrl: options.repositoryUrl,
     liveReload: options.liveReload,
+    resolveWikiImage: options.resolveWikiImage,
   });
 }
 

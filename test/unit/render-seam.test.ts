@@ -107,4 +107,19 @@ describe("render export surface", () => {
       async: async.html.match(/<img src="([^"]+)" alt="Diagram">/)?.[1],
     }, { sync: expected, async: expected });
   });
+
+  it("supports opt-in wiki images through both public rendering APIs", async (t) => {
+    const directory = mkdtempSync(join(tmpdir(), "silmaril-wiki-image-"));
+    t.after(() => rmSync(directory, { recursive: true, force: true }));
+    const image = '<svg xmlns="http://www.w3.org/2000/svg"/>';
+    writeFileSync(join(directory, "Example.svg"), image, "utf8");
+    const markdown = "## Image\n\n![[Example.svg]]\n\n`![[Code.svg]]`";
+    const options = { assetBaseDir: directory, resolveWikiImage: (reference: string) => reference };
+    const results = [silmaril.render(markdown, options), await silmaril.renderAsync(markdown, options)];
+    const expected = `<img src="data:image/svg+xml;base64,${Buffer.from(image).toString("base64")}" alt="Example.svg">`;
+
+    assert.deepEqual(results.map(({ html }) => html.match(/<img [^>]+>/)?.[0]), [expected, expected]);
+    assert.ok(results.every(({ html }) => html.includes("<code>![[Code.svg]]</code>")));
+    assert.ok(silmaril.render(markdown).html.includes("<p>![[Example.svg]]</p>"));
+  });
 });

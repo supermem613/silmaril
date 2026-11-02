@@ -40,8 +40,44 @@ function classifyHref(href: string): ClassifiedHref {
   return { kind: "none" };
 }
 
-function createMarkdownRenderer(resolveImage?: (source: string) => string): MarkdownIt {
+function createMarkdownRenderer(
+  resolveImage?: (source: string) => string,
+  resolveWikiImage?: (source: string) => string,
+): MarkdownIt {
   const markdownIt = new MarkdownIt(DEFAULT_RENDERER_OPTIONS);
+
+  if (resolveWikiImage) {
+    markdownIt.inline.ruler.before("image", "wiki_image", (state, silent) => {
+      if (!state.src.startsWith("![[", state.pos)) {
+        return false;
+      }
+      const end = state.src.indexOf("]]", state.pos + 3);
+      if (end === -1) {
+        return false;
+      }
+      const embed = state.src.slice(state.pos + 3, end);
+      const separator = embed.indexOf("|");
+      const reference = (separator === -1 ? embed : embed.slice(0, separator)).trim();
+      const label = separator === -1 ? undefined : embed.slice(separator + 1).trim();
+      if (embed.includes("\n") || !/\.(?:png|jpe?g|gif|svg|webp|avif)$/i.test(reference)) {
+        return false;
+      }
+      if (!silent) {
+        const token = state.push("image", "img", 0);
+        token.attrs = [["src", resolveWikiImage(reference)], ["alt", ""]];
+        const size = label?.match(/^([1-9]\d*)(?:x([1-9]\d*))?$/);
+        token.content = size ? reference : (label || reference);
+        if (size) {
+          token.attrSet("width", size[1]);
+          if (size[2]) {
+            token.attrSet("height", size[2]);
+          }
+        }
+      }
+      state.pos = end + 2;
+      return true;
+    });
+  }
 
   markdownIt.renderer.rules.code_inline = (tokens, index) => {
     const content = tokens[index]?.content ?? "";
@@ -90,7 +126,11 @@ function createMarkdownRenderer(resolveImage?: (source: string) => string): Mark
     const reference = typeof token?.attrGet === "function" ? token.attrGet("src") : "";
     const source = reference && resolveImage ? resolveImage(reference) : reference;
     if (source && /^data:image\/(?:png|jpeg|gif|svg\+xml|webp|avif);base64,[a-z\d+/=]+$/i.test(source)) {
-      return `<img src="${escapeHtml(source)}" alt="${escapeHtml(String(altText))}">`;
+      const dimensions = ["width", "height"].map((name) => {
+        const value = token.attrGet(name);
+        return value ? ` ${name}="${escapeHtml(value)}"` : "";
+      }).join("");
+      return `<img src="${escapeHtml(source)}" alt="${escapeHtml(String(altText))}"${dimensions}>`;
     }
     return altText ? escapeHtml(String(altText)) : "";
   };
@@ -188,16 +228,21 @@ async function resolveImages(
   }
 }
 
-export function renderMarkdown(markdown: string, resolveImage?: (source: string) => string): string {
-  const renderer = createMarkdownRenderer(resolveImage);
+export function renderMarkdown(
+  markdown: string,
+  resolveImage?: (source: string) => string,
+  resolveWikiImage?: (source: string) => string,
+): string {
+  const renderer = createMarkdownRenderer(resolveImage, resolveWikiImage);
   return renderSegments(parseSegments(markdown, renderer), renderer);
 }
 
 export async function renderMarkdownAsync(
   markdown: string,
   resolveImage: (source: string) => Promise<string>,
+  resolveWikiImage?: (source: string) => string,
 ): Promise<string> {
-  const renderer = createMarkdownRenderer();
+  const renderer = createMarkdownRenderer(undefined, resolveWikiImage);
   const segments = parseSegments(markdown, renderer);
   await resolveImages(segments, resolveImage);
   return renderSegments(segments, renderer);

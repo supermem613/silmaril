@@ -3,6 +3,7 @@ import { writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { SILMARIL_VIEW_TYPE, SilmarilDeckView } from './deckView.js';
 import { renderPresentationFromMarkdownAsync } from '../../src/pipeline/renderFile.js';
+import { createWikiImageResolver } from './renderAdapter.js';
 
 interface ElectronSaveDialog {
   showSaveDialog(options: {
@@ -113,7 +114,8 @@ export default class SilmarilPlugin extends Plugin {
       // that talks to the Obsidian parent frame, which a saved file must never
       // carry, so this renders directly instead.
       const sourcePath = adapter.getFullPath(view.file.path);
-      const { html } = await renderPresentationFromMarkdownAsync(view.editor.getValue(), sourcePath);
+      const resolveWikiImage = createWikiImageResolver(this.app.metadataCache, adapter, view.file.path);
+      const { html } = await renderPresentationFromMarkdownAsync(view.editor.getValue(), sourcePath, { resolveWikiImage });
 
       const defaultName = `${view.file.basename}.html`;
       const savedPath = await this.writePublishedDeck(
