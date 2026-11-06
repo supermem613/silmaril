@@ -9,5 +9,9 @@ export interface BoardIR {
   rawMarkdown: string;
   title: string;
   subtitle?: string;
+  footer?: {
+    left?: string;
+    right?: string;
+  };
   slides: SlideIR[];
 }

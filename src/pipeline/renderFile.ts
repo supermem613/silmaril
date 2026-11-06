@@ -27,16 +27,69 @@ function assemblePresentation(
   board: BoardIR,
   slides: Array<{ id: string; title: string; content: string }>,
   options: RenderOptions,
+  footer?: { left?: string; right?: string },
 ): RenderedPresentation {
   const html = buildPresentation(slides, {
     documentTitle: board.title,
     documentSubtitle: board.subtitle,
+    documentFooter: footer,
     version: options.version,
     repositoryUrl: options.repositoryUrl,
     liveReload: options.liveReload,
   });
   validateBuildOutput(html);
   return { html, slideCount: slides.length };
+}
+
+function renderFooter(
+  footer: BoardIR["footer"],
+  options: RenderOptions,
+): { left?: string; right?: string } | undefined {
+  if (!footer) {
+    return undefined;
+  }
+  let left: string | undefined;
+  if (footer.left) {
+    left = renderMarkdown(
+      footer.left,
+      (source) => inlineImage(source, options.assetBaseDir ?? process.cwd()),
+      options.resolveWikiImage,
+    );
+  }
+  let right: string | undefined;
+  if (footer.right) {
+    right = renderMarkdown(
+      footer.right,
+      (source) => inlineImage(source, options.assetBaseDir ?? process.cwd()),
+      options.resolveWikiImage,
+    );
+  }
+  return {
+    left,
+    right,
+  };
+}
+
+async function renderFooterAsync(
+  footer: BoardIR["footer"],
+  resolveImage: (source: string) => Promise<string>,
+  resolveWikiImage?: (source: string) => string,
+): Promise<{ left?: string; right?: string } | undefined> {
+  if (!footer) {
+    return undefined;
+  }
+  let left: string | undefined;
+  if (footer.left) {
+    left = await renderMarkdownAsync(footer.left, resolveImage, resolveWikiImage);
+  }
+  let right: string | undefined;
+  if (footer.right) {
+    right = await renderMarkdownAsync(footer.right, resolveImage, resolveWikiImage);
+  }
+  return {
+    left,
+    right,
+  };
 }
 
 export function render(markdown: string, options: RenderOptions = {}): RenderedPresentation {
@@ -50,7 +103,8 @@ export function render(markdown: string, options: RenderOptions = {}): RenderedP
       options.resolveWikiImage,
     ),
   }));
-  return assemblePresentation(board, slides, options);
+  const footer = renderFooter(board.footer, options);
+  return assemblePresentation(board, slides, options, footer);
 }
 
 export async function renderAsync(markdown: string, options: RenderOptions = {}): Promise<RenderedPresentation> {
@@ -64,7 +118,8 @@ export async function renderAsync(markdown: string, options: RenderOptions = {})
       content: await renderMarkdownAsync(slide.body, resolveImage, options.resolveWikiImage),
     });
   }
-  return assemblePresentation(board, slides, options);
+  const footer = await renderFooterAsync(board.footer, resolveImage, options.resolveWikiImage);
+  return assemblePresentation(board, slides, options, footer);
 }
 
 export function renderPresentationFromMarkdown(

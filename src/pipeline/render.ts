@@ -46,6 +46,23 @@ function createMarkdownRenderer(
 ): MarkdownIt {
   const markdownIt = new MarkdownIt(DEFAULT_RENDERER_OPTIONS);
 
+  markdownIt.inline.ruler.before("emphasis", "highlight", (state, silent) => {
+    if (!state.src.startsWith("==", state.pos)) {
+      return false;
+    }
+    const end = state.src.indexOf("==", state.pos + 2);
+    if (end === -1 || end === state.pos + 2 || state.src.slice(state.pos + 2, end).includes("\n")) {
+      return false;
+    }
+    if (!silent) {
+      state.push("mark_open", "mark", 1);
+      state.push("text", "", 0).content = state.src.slice(state.pos + 2, end);
+      state.push("mark_close", "mark", -1);
+    }
+    state.pos = end + 2;
+    return true;
+  });
+
   if (resolveWikiImage) {
     markdownIt.inline.ruler.before("image", "wiki_image", (state, silent) => {
       if (!state.src.startsWith("![[", state.pos)) {

@@ -6,6 +6,61 @@ export const engineeringSubtitleCss = `
     line-height: 1.5;
     overflow-wrap: anywhere;
   }
+
+  .engineering-board-subtitle mark,
+  .engineering-card mark,
+  .engineering-footer mark {
+    border-radius: 0.15em;
+    background: #F4D35E;
+    color: #2A2100;
+    padding: 0 0.12em;
+  }
+`;
+
+export const engineeringFooterCss = `
+  .engineering-footer {
+    position: fixed;
+    bottom: 1.25rem;
+    z-index: 10000;
+    max-width: 42%;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    pointer-events: none;
+  }
+
+  .engineering-footer--left {
+    left: 1.25rem;
+  }
+
+  .engineering-footer--right {
+    right: 1.25rem;
+  }
+
+  .engineering-footer p {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  .engineering-footer img {
+    width: auto;
+    max-width: 5rem;
+    height: 1.25rem;
+    max-height: 1.25rem;
+    object-fit: contain;
+  }
+
+  body:has(.engineering-footer--left) .engineering-slide-progress {
+    left: 12rem;
+  }
+
+  body:has(.engineering-footer--right) .engineering-board-signature {
+    bottom: 3.25rem;
+  }
 `;
 
 export const engineeringTokensCss = `

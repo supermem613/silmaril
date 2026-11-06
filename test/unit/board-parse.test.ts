@@ -52,6 +52,43 @@ describe("parseBoard", () => {
       "Slide body",
     ].join("\r\n"));
 
-    assert.equal(board.subtitle, "Request paths, **storage**, and recovery");
+    assert.equal(board.subtitle, "Request paths, **storage**,\nand recovery");
+  });
+
+  it("parses deck-wide footer blocks from the title preamble", () => {
+    const board = parseBoard([
+      "# Architecture review",
+      "",
+      ":::footer left",
+      "![Logo](./logo.png) Acme Engineering",
+      ":::",
+      "",
+      ":::footer right",
+      "Internal · 2026",
+      ":::",
+      "",
+      "## Request path",
+      "",
+      "Slide body",
+    ].join("\n"));
+
+    assert.equal(board.subtitle, undefined);
+    assert.equal(board.footer?.left, "![Logo](./logo.png) Acme Engineering");
+    assert.equal(board.footer?.right, "Internal · 2026");
+  });
+
+  it("rejects invalid deck-wide footer blocks", () => {
+    assert.throws(
+      () => parseBoard("# Deck\n\n:::footer left\nFirst\nSecond\n:::\n\n## Slide"),
+      /footer left must contain exactly one non-empty line/,
+    );
+    assert.throws(
+      () => parseBoard("# Deck\n\n:::footer center\nText\n:::\n\n## Slide"),
+      /unknown footer side: center/,
+    );
+    assert.throws(
+      () => parseBoard("# Deck\n\n:::footer left\nOne\n:::\n\n:::footer left\nTwo\n:::\n\n## Slide"),
+      /duplicate footer block: left/,
+    );
   });
 });

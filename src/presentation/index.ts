@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { renderTemplate, type TemplateStep } from "../pipeline/template.js";
 import { engineeringFitScript } from "./fit.js";
 import { engineeringLiveReloadScript } from "./livereload.js";
-import { engineeringSubtitleCss, engineeringTokensCss } from "./tokens.css.js";
+import { engineeringFooterCss, engineeringSubtitleCss, engineeringTokensCss } from "./tokens.css.js";
 import {
   engineeringNavigationScript,
   engineeringProgressMarkup,
@@ -19,6 +19,10 @@ export interface PresentationSlide {
 export interface PresentationOptions {
   readonly documentTitle: string;
   readonly documentSubtitle?: string;
+  readonly documentFooter?: {
+    readonly left?: string;
+    readonly right?: string;
+  };
   readonly version?: string;
   readonly repositoryUrl?: string;
   readonly liveReload?: boolean;
@@ -49,6 +53,23 @@ function buildSignature(version: string | undefined, repositoryUrl: string | und
     ? `<a href="${escapeHtml(repositoryUrl)}" target="_blank" rel="noreferrer">silmaril</a>`
     : "silmaril";
   return `<div class="engineering-board-signature">${name} · ${escapeHtml(version)}</div>`;
+}
+
+function buildFooterMarkup(footer: PresentationOptions["documentFooter"]): string {
+  if (!footer) {
+    return "";
+  }
+  const left = footer.left
+    ? `<div class="engineering-footer engineering-footer--left">${footer.left}</div>`
+    : "";
+  const right = footer.right
+    ? `<div class="engineering-footer engineering-footer--right">${footer.right}</div>`
+    : "";
+  return `${left}${right}`;
+}
+
+function escapeSubtitle(value: string): string {
+  return escapeHtml(value).replace(/\r\n?|\n/g, "<br>");
 }
 
 function layoutSlides(slides: readonly PresentationSlide[]): SlidePlacement[] {
@@ -115,7 +136,7 @@ export function buildPresentation(
   const overviewContent = `
       <div class="engineering-board-title">
         <h1>${escapeHtml(options.documentTitle)}</h1>${options.documentSubtitle ? `
-        <p class="engineering-board-subtitle">${escapeHtml(options.documentSubtitle)}</p>` : ""}
+        <p class="engineering-board-subtitle">${escapeSubtitle(options.documentSubtitle)}</p>` : ""}
       </div>
       ${buildSignature(options.version, options.repositoryUrl)}
   `;
@@ -135,13 +156,16 @@ export function buildPresentation(
     })),
   ];
   const liveReloadBlock = options.liveReload ? engineeringLiveReloadScript : "";
-  const scenery = `${engineeringToggleMarkup()}${engineeringProgressMarkup()}${liveReloadBlock}${engineeringToggleScript}${engineeringNavigationScript}${engineeringFitScript}`;
+  const footerMarkup = buildFooterMarkup(options.documentFooter);
+  const scenery = `${footerMarkup}${engineeringToggleMarkup()}${engineeringProgressMarkup()}${liveReloadBlock}${engineeringToggleScript}${engineeringNavigationScript}${engineeringFitScript}`;
 
   return renderTemplate({
     title: options.documentTitle,
     bodyClass: "engineering-theme",
     viewport: "width=device-width, initial-scale=1",
-    css: options.documentSubtitle ? engineeringTokensCss + engineeringSubtitleCss : engineeringTokensCss,
+    css: engineeringTokensCss
+      + (options.documentSubtitle ? engineeringSubtitleCss : "")
+      + (options.documentFooter ? engineeringFooterCss : ""),
     scenery,
     impressAttributes: {
       width: 1120,

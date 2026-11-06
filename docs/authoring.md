@@ -34,13 +34,37 @@ flowchart LR
 
 When the `#` heading is omitted, the Markdown filename becomes the title.
 
-The subtitle is the first paragraph after the title, with blank lines allowed between them. Wrapped lines in that paragraph are joined with spaces. It is plain text, like the title: Markdown formatting and HTML are displayed literally. Lists, quotes, code blocks, and headings do not become subtitles. Later preamble paragraphs are not included.
+The subtitle is the first paragraph after the title, with blank lines allowed between them. Physical line breaks inside that paragraph become line breaks in the overview. It is plain text, like the title: Markdown formatting and HTML are displayed literally. Lists, quotes, code blocks, and headings do not become subtitles. Later preamble paragraphs are not included.
 
 The board overview shows the subtitle below the title in smaller, muted text. Long text wraps, and the overview fits the heading and slide cards without overlap. Subtitles do not change the browser title, slide count, or focused-slide view.
 
+### Footers
+
+Deck-wide footer blocks can add a fixed image-plus-text line to the bottom left or bottom right of every view:
+
+```markdown
+# Architecture review
+
+Engineering design review
+
+:::footer left
+![Logo](./logo.png) Acme Engineering
+:::
+
+:::footer right
+Internal · 2026
+:::
+
+## Request path
+```
+
+Place `:::footer left` or `:::footer right` blocks in the title preamble, before the first slide. Each block is optional and accepts exactly one non-empty line. The line can use inline Markdown, including a local or embedded image. Duplicate sides, unknown sides, unterminated blocks, and multiline text are rejected.
+
+The left and right footers remain fixed in the bottom-left and bottom-right corners of the whole-board overview and focused slides. They do not consume slide-card layout space.
+
 ## Slide content
 
-Slide bodies support paragraphs, lists, tables, emphasis, images, syntax-highlighted code, and Mermaid diagrams. Raw HTML is escaped. Local images are embedded in the HTML output. HTTP and HTTPS image URLs are downloaded and embedded during publish or preview, so the presentation remains self-contained. Links to websites open in a new tab.
+Slide bodies support paragraphs, lists, tables, emphasis, highlight, strikethrough, images, syntax-highlighted code, and Mermaid diagrams. Use `==text==` for highlight and `~~text~~` for strikethrough. Raw HTML is escaped. Local images are embedded in the HTML output. HTTP and HTTPS image URLs are downloaded and embedded during publish or preview, so the presentation remains self-contained. Links to websites open in a new tab.
 
 ```markdown
 ![Architecture](https://example.com/architecture.png)

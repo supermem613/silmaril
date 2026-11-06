@@ -1,7 +1,4 @@
-import MarkdownIt from "markdown-it";
 import type { BoardIR, SlideIR } from "./types.js";
-
-const metadataMarkdown = new MarkdownIt({ html: true });
 
 export function parseBoard(markdown: string, fallbackTitle = "Presentation"): BoardIR {
   const title = parseTitle(markdown) ?? fallbackTitle;
@@ -10,6 +7,7 @@ export function parseBoard(markdown: string, fallbackTitle = "Presentation"): Bo
     rawMarkdown: markdown,
     title,
     subtitle: parseSubtitle(markdown),
+    footer: parseFooter(markdown),
     slides: parseSlides(markdown),
   };
 }
@@ -26,23 +24,202 @@ function parseTitle(markdown: string): string | null {
 
 function parseSubtitle(markdown: string): string | undefined {
   const lines = markdown.split(/\r?\n/);
-  const tokens = metadataMarkdown.parse(markdown, {});
-  for (let index = 0; index < tokens.length; index += 1) {
-    const token = tokens[index];
-    if (token.type !== "heading_open" || token.level !== 0 || !token.map) {
+  let titleIndex = -1;
+  let slideIndex = lines.length;
+  let inFence = false;
+  let fenceCharacter: string | null = null;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const fence = lines[index].trim().match(/^(`{3,}|~{3,})/);
+    if (fence) {
+      const character = fence[1][0];
+      if (!inFence) {
+        inFence = true;
+        fenceCharacter = character;
+      } else if (fenceCharacter === character) {
+        inFence = false;
+        fenceCharacter = null;
+      }
       continue;
     }
-    const heading = lines[token.map[0]];
-    if (/^##\s+/.test(heading)) {
-      return undefined;
+    if (inFence) {
+      continue;
     }
-    if (/^#\s+/.test(heading)) {
-      return tokens[index + 3]?.type === "paragraph_open"
-        ? tokens[index + 4].content.replace(/\s*\n\s*/g, " ").trim() || undefined
-        : undefined;
+    if (titleIndex === -1 && /^#\s+/.test(lines[index])) {
+      titleIndex = index;
+    } else if (titleIndex !== -1 && /^##\s+/.test(lines[index])) {
+      slideIndex = index;
+      break;
     }
   }
-  return undefined;
+  if (titleIndex === -1) {
+    return undefined;
+  }
+
+  const preamble = stripFooterBlocks(lines.slice(titleIndex + 1, slideIndex));
+  let start = 0;
+  while (start < preamble.length && preamble[start].trim() === "") {
+    start += 1;
+  }
+  if (start >= preamble.length) {
+    return undefined;
+  }
+
+  const firstRaw = preamble[start];
+  const first = firstRaw.trim();
+  if (
+    /^(?:>|[-+*]\s|#{1,6}\s|```|~~~| {4}\S|<!--)/.test(first)
+    || /^:::\S*/.test(first)
+    || /^ {4}\S/.test(firstRaw)
+    || /^(?:[*_-]\s*){3,}$/.test(first)
+  ) {
+    return undefined;
+  }
+
+  const paragraph: string[] = [preamble[start]];
+  for (let index = start + 1; index < preamble.length; index += 1) {
+    const line = preamble[index];
+    if (line.trim() === "") {
+      break;
+    }
+    if (/^(?:>|[-+*]\s|#{1,6}\s|```|~~~| {4}\S|<!--)/.test(line.trim()) || /^:::\S*/.test(line.trim())) {
+      break;
+    }
+    paragraph.push(line);
+  }
+  return paragraph.join("\n").trim() || undefined;
+}
+
+function stripFooterBlocks(lines: readonly string[]): string[] {
+  const cleaned: string[] = [];
+  let inFooter = false;
+  let inFence = false;
+  let fenceCharacter: string | null = null;
+  for (const line of lines) {
+    const fence = line.trim().match(/^(`{3,}|~{3,})/);
+    if (fence) {
+      const character = fence[1][0];
+      if (!inFence) {
+        inFence = true;
+        fenceCharacter = character;
+      } else if (fenceCharacter === character) {
+        inFence = false;
+        fenceCharacter = null;
+      }
+      cleaned.push(line);
+      continue;
+    }
+    if (inFence) {
+      cleaned.push(line);
+      continue;
+    }
+    if (/^:::footer\s+(left|right)\s*$/.test(line.trim())) {
+      inFooter = true;
+      continue;
+    }
+    if (inFooter && /^:::\s*$/.test(line.trim())) {
+      inFooter = false;
+      continue;
+    }
+    if (!inFooter) {
+      cleaned.push(line);
+    }
+  }
+  return cleaned;
+}
+
+function parseFooter(markdown: string): BoardIR["footer"] {
+  const lines = markdown.split(/\r?\n/);
+  let titleIndex = -1;
+  let slideIndex = lines.length;
+  let inFence = false;
+  let fenceCharacter: string | null = null;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const fence = lines[index].trim().match(/^(`{3,}|~{3,})/);
+    if (fence) {
+      const character = fence[1][0];
+      if (!inFence) {
+        inFence = true;
+        fenceCharacter = character;
+      } else if (fenceCharacter === character) {
+        inFence = false;
+        fenceCharacter = null;
+      }
+      continue;
+    }
+    if (inFence) {
+      continue;
+    }
+    if (titleIndex === -1 && /^#\s+/.test(lines[index])) {
+      titleIndex = index;
+    } else if (titleIndex !== -1 && /^##\s+/.test(lines[index])) {
+      slideIndex = index;
+      break;
+    }
+  }
+  if (titleIndex === -1) {
+    return undefined;
+  }
+
+  const footer: { left?: string; right?: string } = {};
+  let side: "left" | "right" | undefined;
+  const content: string[] = [];
+  inFence = false;
+  fenceCharacter = null;
+
+  for (let index = titleIndex + 1; index < slideIndex; index += 1) {
+    const fence = lines[index].trim().match(/^(`{3,}|~{3,})/);
+    if (fence) {
+      const character = fence[1][0];
+      if (!inFence) {
+        inFence = true;
+        fenceCharacter = character;
+      } else if (fenceCharacter === character) {
+        inFence = false;
+        fenceCharacter = null;
+      }
+      continue;
+    }
+    if (inFence) {
+      continue;
+    }
+    const line = lines[index].trim();
+    const opening = line.match(/^:::footer(?:\s+(.*))?\s*$/);
+    if (opening) {
+      if (side) {
+        throw new Error("nested footer blocks are not allowed");
+      }
+      const requestedSide = (opening[1] ?? "").trim();
+      if (requestedSide !== "left" && requestedSide !== "right") {
+        throw new Error(`unknown footer side: ${requestedSide || "(missing)"}`);
+      }
+      if (footer[requestedSide]) {
+        throw new Error(`duplicate footer block: ${requestedSide}`);
+      }
+      side = requestedSide;
+      content.length = 0;
+      continue;
+    }
+    if (side && /^:::\s*$/.test(line)) {
+      const nonEmpty = content.filter((value) => value.trim() !== "");
+      if (nonEmpty.length !== 1) {
+        throw new Error(`footer ${side} must contain exactly one non-empty line`);
+      }
+      footer[side] = nonEmpty[0].trim();
+      side = undefined;
+      content.length = 0;
+      continue;
+    }
+    if (side) {
+      content.push(lines[index]);
+    }
+  }
+  if (side) {
+    throw new Error(`unterminated footer block: ${side}`);
+  }
+
+  return footer.left || footer.right ? footer : undefined;
 }
 
 export interface SlideRange {

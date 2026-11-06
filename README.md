@@ -24,7 +24,23 @@ node dist/cli.js publish talk.md --out talk.html
 
 The `#` heading is the presentation title. Each `##` heading starts a slide. If the title is omitted, Silmaril uses the Markdown filename. The output opens on the whole board, works offline, and contains its scripts, styles, local images, and Mermaid diagrams.
 
-The first paragraph directly below the `#` title is an optional plain-text subtitle. It appears below the title on the board overview, not on individual slides.
+The first paragraph directly below the `#` title is an optional plain-text subtitle. Physical line breaks inside that paragraph become multiline subtitle lines on the board overview, not on individual slides.
+
+Slide content supports inline highlight with `==text==` and strikethrough with `~~text~~`.
+
+Deck-wide footers can appear in the title preamble:
+
+```markdown
+:::footer left
+![Logo](./logo.png) Acme Engineering
+:::
+
+:::footer right
+Internal · 2026
+:::
+```
+
+Each footer side is optional and accepts one inline-Markdown line. It stays fixed in the bottom-left or bottom-right corner of every overview and focused-slide view. See [the authoring guide](docs/authoring.md) for the complete footer contract.
 
 ## Present
 

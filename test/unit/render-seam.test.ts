@@ -38,6 +38,79 @@ describe("render export surface", () => {
     assert.equal(results[0].html, results[1].html);
   });
 
+  it("renders multiline deck subtitles with explicit line breaks", () => {
+    const { html } = silmaril.render([
+      "# Deck",
+      "",
+      "First line",
+      "Second & line",
+      "",
+      "## First",
+      "",
+      "Body",
+    ].join("\n"));
+
+    assert.match(
+      html,
+      /<p class="engineering-board-subtitle">First line<br>Second &amp; line<\/p>/,
+    );
+  });
+
+  it("renders highlight and strikethrough Markdown", () => {
+    const { html } = silmaril.render("## First\n\n==Hello== and ~~removed~~");
+
+    assert.match(html, /<mark>Hello<\/mark>/);
+    assert.match(html, /<s>removed<\/s>/);
+  });
+
+  it("renders persistent bottom-left and bottom-right footer content", () => {
+    const { html } = silmaril.render([
+      "# Deck",
+      "",
+      ":::footer left",
+      "**Platform** Engineering",
+      ":::",
+      "",
+      ":::footer right",
+      "Internal · 2026",
+      ":::",
+      "",
+      "## First",
+      "",
+      "Body",
+    ].join("\n"));
+
+    assert.match(html, /<div class="engineering-footer engineering-footer--left"><p><strong>Platform<\/strong> Engineering<\/p>\s*<\/div>/);
+    assert.match(html, /<div class="engineering-footer engineering-footer--right"><p>Internal · 2026<\/p>\s*<\/div>/);
+    assert.match(html, /\.engineering-footer--left\s*\{[^}]*left: 1\.25rem;/);
+    assert.match(html, /\.engineering-footer--right\s*\{[^}]*right: 1\.25rem;/);
+  });
+
+  it("embeds a fixed footer image through sync and async rendering", async () => {
+    const directory = new URL("../fixtures/inline/", import.meta.url);
+    const bytes = readFileSync(new URL("local.png", directory));
+    const markdown = [
+      "# Deck",
+      "",
+      ":::footer left",
+      "![Logo](./local.png) Acme Engineering",
+      ":::",
+      "",
+      "## First",
+      "",
+      "Body",
+    ].join("\n");
+    const options = { assetBaseDir: fileURLToPath(directory) };
+    const results = [silmaril.render(markdown, options), await silmaril.renderAsync(markdown, options)];
+
+    for (const result of results) {
+      assert.match(
+        result.html,
+        new RegExp(`<div class="engineering-footer engineering-footer--left"><p><img src="data:image/png;base64,${bytes.toString("base64")}" alt="Logo">\\s*Acme Engineering</p>`),
+      );
+    }
+  });
+
   it("preserves the title-only document for preambles that are not subtitle paragraphs", async () => {
     const expected = buildPresentation(
       [{ id: "first", title: "First", content: "<p>Body</p>\n" }],
