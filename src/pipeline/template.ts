@@ -69,8 +69,8 @@ ${options.css}
     </style>
   </head>
   <body class="${escapeHtml(options.bodyClass)}">
-    <div id="impress"${impressAttributes}>
 ${options.scenery.trim()}
+    <div id="impress"${impressAttributes}>
 ${stepMarkup}
     </div>
 <script>${options.impressScript}</script>

@@ -86,6 +86,45 @@ describe("render export surface", () => {
     assert.match(html, /\.engineering-footer--right\s*\{[^}]*right: 1\.25rem;/);
   });
 
+  it("renders footer scenery outside the transformed presentation canvas", () => {
+    const { html } = silmaril.render([
+      "# Deck",
+      "",
+      ":::footer left",
+      "Platform Engineering",
+      ":::",
+      "",
+      "## First",
+      "",
+      "Body",
+    ].join("\n"));
+
+    const bodyIndex = html.indexOf("<body");
+    const footerIndex = html.indexOf('<div class="engineering-footer engineering-footer--left">');
+    const impressIndex = html.indexOf('<div id="impress"');
+
+    assert.ok(bodyIndex < footerIndex && footerIndex < impressIndex);
+  });
+
+  it("renders footer images at their intrinsic dimensions", () => {
+    const { html } = silmaril.render([
+      "# Deck",
+      "",
+      ":::footer left",
+      "![Logo](data:image/png;base64,AA==)",
+      ":::",
+      "",
+      "## First",
+      "",
+      "Body",
+    ].join("\n"));
+
+    assert.match(
+      html,
+      /\.engineering-footer img\s*\{[^}]*width: auto;[^}]*height: auto;[^}]*max-width: none;[^}]*max-height: none;/,
+    );
+  });
+
   it("embeds a fixed footer image through sync and async rendering", async () => {
     const directory = new URL("../fixtures/inline/", import.meta.url);
     const bytes = readFileSync(new URL("local.png", directory));
