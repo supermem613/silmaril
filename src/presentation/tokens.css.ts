@@ -48,9 +48,9 @@ export const engineeringFooterCss = `
 
   .engineering-footer img {
     width: auto;
-    max-width: 5rem;
-    height: 1.25rem;
-    max-height: 1.25rem;
+    height: auto;
+    max-width: none;
+    max-height: none;
     object-fit: contain;
   }
 
