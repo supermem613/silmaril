@@ -12,6 +12,7 @@ const impressReadExpression =
 const externals = [
   'obsidian',
   'electron',
+  'playwright-core',
   ...builtinModules,
   ...builtinModules.map((name) => `node:${name}`),
 ];

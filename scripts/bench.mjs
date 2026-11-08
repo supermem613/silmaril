@@ -20,22 +20,16 @@ async function main() {
   const pipeline = await import(pathToFileURL(path.resolve(scriptDirectory, "../dist/index.js")).href);
   const manifest = JSON.parse(await fs.readFile(path.resolve(scriptDirectory, "../package.json"), "utf8"));
   const started = process.hrtime.bigint();
-  const board = pipeline.parseBoard(source, path.basename(inputPath, path.extname(inputPath)));
-  const slides = board.slides.map((slide) => ({
-    id: slide.id,
-    title: slide.title,
-    content: pipeline.renderMarkdown(pipeline.inlineMarkdown(slide.body, path.dirname(inputPath)).markdown),
-    markdownSource: slide.body,
-  }));
-  const html = pipeline.buildPresentation(slides, {
-    documentTitle: board.title,
+  const presentation = await pipeline.renderAsync(source, {
+    title: path.basename(inputPath, path.extname(inputPath)),
+    assetBaseDir: path.dirname(inputPath),
     version: manifest.version,
     repositoryUrl: manifest.repository?.url,
   });
-  pipeline.validateBuildOutput(html);
+  pipeline.validateBuildOutput(presentation.html);
   const metrics = {
     totalMs: Number((Number(process.hrtime.bigint() - started) / 1e6).toFixed(3)),
-    outBytes: Buffer.byteLength(html, "utf8"),
+    outBytes: Buffer.byteLength(presentation.html, "utf8"),
   };
   process.stdout.write(args.json ? JSON.stringify(metrics) : JSON.stringify(metrics, null, 2));
 }

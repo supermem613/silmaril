@@ -1,6 +1,7 @@
 import { renderPresentationFromMarkdownAsync } from '../../src/pipeline/renderFile.js';
 import { dirname, relative } from 'node:path';
 import type { FileSystemAdapter, MetadataCache } from 'obsidian';
+import mermaid from 'mermaid';
 
 export function createWikiImageResolver(
   metadataCache: Pick<MetadataCache, 'getFirstLinkpathDest'>,
@@ -108,12 +109,83 @@ function addPreviewBridge(html: string): string {
   return html.replace(closingBody, `${previewBridgeScript}\n${closingBody}`);
 }
 
+export function normalizeMermaidSvg(svg: string): string {
+  let normalized = svg.replace(/\sstyle="max-width:[^"]*"/, "");
+  const viewBox = normalized.match(/viewBox="([^"]+)"/)?.[1];
+  if (viewBox) {
+    const values = viewBox.trim().split(/\s+/).map(Number);
+    if (values.length >= 4 && values.every(Number.isFinite)) {
+      const width = Math.max(1, Math.ceil(values[2]));
+      const height = Math.max(1, Math.ceil(values[3]));
+      const start = normalized.indexOf("<svg");
+      const end = normalized.indexOf(">", start);
+      if (start >= 0 && end >= 0) {
+        let attrs = normalized
+          .slice(start + 4, end)
+          .replace(/\s(?:width|height|role|aria-label|preserveAspectRatio)="[^"]*"/g, "");
+        attrs = attrs.replace(/\sclass="[^"]*"/g, "");
+        normalized = `${normalized.slice(0, start)}<svg${attrs} class="engineering-mermaid" width="${width}" height="${height}" role="img" aria-label="Mermaid diagram" preserveAspectRatio="xMidYMid meet"${normalized.slice(end)}`;
+        return normalized;
+      }
+    }
+  }
+  if (!normalized.includes("class=\"engineering-mermaid\"")) {
+    normalized = normalized.replace(/<svg/, "<svg class=\"engineering-mermaid\"");
+  }
+  return normalized;
+}
+
+async function renderMermaidInObsidian(source: string): Promise<string> {
+  if (typeof document === "undefined") {
+    const realMermaid = await import("../../src/pipeline/mermaidReal.js");
+    const svg = await realMermaid.renderMermaidBlockAsync(source);
+    if (!svg) {
+      throw new Error("Real Mermaid rendering is unavailable outside the Obsidian browser.");
+    }
+    return svg;
+  }
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: "strict",
+    htmlLabels: false,
+    flowchart: {
+      htmlLabels: false,
+      curve: "basis",
+      rankSpacing: 80,
+      nodeSpacing: 50,
+    },
+    theme: "base",
+    themeVariables: {
+      primaryColor: "rgba(103, 211, 194, 0.14)",
+      primaryTextColor: "#67D3C2",
+      secondaryColor: "rgba(103, 211, 194, 0.14)",
+      tertiaryColor: "#14191D",
+      lineColor: "#B2BDC3",
+      edgeLabelBackground: "#14191D",
+      clusterBkg: "#14191D",
+      clusterBorder: "#354047",
+      fontFamily: "Segoe UI Variable Text, Aptos, Segoe UI, sans-serif",
+    },
+  });
+  let hash = 2166136261;
+  for (let index = 0; index < source.length; index += 1) {
+    hash ^= source.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  const renderId = `silmaril-mermaid-${(hash >>> 0).toString(16)}`;
+  const result = await mermaid.render(renderId, source);
+  return normalizeMermaidSvg(result.svg);
+}
+
 export async function renderDeck(
   markdown: string,
   sourcePath: string,
   resolveWikiImage?: (source: string) => string,
 ) {
-  const presentation = await renderPresentationFromMarkdownAsync(markdown, sourcePath, { resolveWikiImage });
+  const presentation = await renderPresentationFromMarkdownAsync(markdown, sourcePath, {
+    resolveWikiImage,
+    resolveMermaid: renderMermaidInObsidian,
+  });
 
   return {
     html: addPreviewBridge(presentation.html),
