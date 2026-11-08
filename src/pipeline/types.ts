@@ -2,6 +2,8 @@ export interface SlideIR {
   id: string;
   title: string;
   body: string;
+  kind: "content" | "section";
+  subtitle?: string;
 }
 
 export interface BoardIR {

@@ -56,6 +56,34 @@ describe("render export surface", () => {
     );
   });
 
+  it("renders title-only and subtitle section slides through both APIs", async () => {
+    const markdown = [
+      "# Deck",
+      "",
+      "## Architecture",
+      ":::section",
+      ":::",
+      "",
+      "## Request path",
+      ":::section",
+      "Paths, **storage**, & recovery",
+      ":::",
+    ].join("\n");
+    const results = [silmaril.render(markdown), await silmaril.renderAsync(markdown)];
+
+    for (const result of results) {
+      assert.match(
+        result.html,
+        /<div class="engineering-section" data-theme="dark">\s*<h2>Architecture<\/h2>\s*<\/div>/,
+      );
+      assert.match(
+        result.html,
+        /<div class="engineering-section" data-theme="dark">\s*<h2>Request path<\/h2>\s*<p class="engineering-section__subtitle">Paths, \*\*storage\*\*, &amp; recovery<\/p>\s*<\/div>/,
+      );
+      assert.deepEqual(result.slideCount, 2);
+    }
+  });
+
   it("renders highlight and strikethrough Markdown", () => {
     const { html } = silmaril.render("## First\n\n==Hello== and ~~removed~~");
 

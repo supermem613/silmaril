@@ -6,6 +6,7 @@ import { renderMarkdown, renderMarkdownAsync } from "./render.js";
 import { validateBuildOutput } from "./validate.js";
 import type { BoardIR } from "./types.js";
 import { buildPresentation } from "../presentation/index.js";
+import type { PresentationSlide } from "../presentation/index.js";
 
 export interface RenderOptions {
   readonly title?: string;
@@ -26,7 +27,7 @@ export interface RenderedPresentation {
 
 function assemblePresentation(
   board: BoardIR,
-  slides: Array<{ id: string; title: string; content: string }>,
+  slides: readonly PresentationSlide[],
   options: RenderOptions,
   footer?: { left?: string; right?: string },
 ): RenderedPresentation {
@@ -96,15 +97,28 @@ async function renderFooterAsync(
 
 export function render(markdown: string, options: RenderOptions = {}): RenderedPresentation {
   const board = parseBoard(markdown, options.title ?? "presentation");
-  const slides = board.slides.map((slide) => ({
-    id: slide.id,
-    title: slide.title,
-    content: renderMarkdown(
-      slide.body,
-      (source) => inlineImage(source, options.assetBaseDir ?? process.cwd()),
-      options.resolveWikiImage,
-    ),
-  }));
+  const slides: PresentationSlide[] = [];
+  for (const slide of board.slides) {
+    if (slide.kind === "section") {
+      slides.push({
+        id: slide.id,
+        title: slide.title,
+        kind: "section",
+        ...(slide.subtitle ? { subtitle: slide.subtitle } : {}),
+      });
+    } else {
+      slides.push({
+        id: slide.id,
+        title: slide.title,
+        kind: "content",
+        content: renderMarkdown(
+          slide.body,
+          (source) => inlineImage(source, options.assetBaseDir ?? process.cwd()),
+          options.resolveWikiImage,
+        ),
+      });
+    }
+  }
   const footer = renderFooter(board.footer, options);
   return assemblePresentation(board, slides, options, footer);
 }
@@ -112,13 +126,23 @@ export function render(markdown: string, options: RenderOptions = {}): RenderedP
 export async function renderAsync(markdown: string, options: RenderOptions = {}): Promise<RenderedPresentation> {
   const board = parseBoard(markdown, options.title ?? "presentation");
   const resolveImage = createAsyncImageResolver(options.assetBaseDir ?? process.cwd());
-  const slides = [];
+  const slides: PresentationSlide[] = [];
   for (const slide of board.slides) {
-    slides.push({
-      id: slide.id,
-      title: slide.title,
-      content: await renderMarkdownAsync(slide.body, resolveImage, options.resolveWikiImage, options.resolveMermaid),
-    });
+    if (slide.kind === "section") {
+      slides.push({
+        id: slide.id,
+        title: slide.title,
+        kind: "section",
+        ...(slide.subtitle ? { subtitle: slide.subtitle } : {}),
+      });
+    } else {
+      slides.push({
+        id: slide.id,
+        title: slide.title,
+        kind: "content",
+        content: await renderMarkdownAsync(slide.body, resolveImage, options.resolveWikiImage, options.resolveMermaid),
+      });
+    }
   }
   const footer = await renderFooterAsync(board.footer, resolveImage, options.resolveWikiImage, options.resolveMermaid);
   return assemblePresentation(board, slides, options, footer);

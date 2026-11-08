@@ -55,6 +55,45 @@ describe("parseBoard", () => {
     assert.equal(board.subtitle, "Request paths, **storage**,\nand recovery");
   });
 
+  it("parses title-only and subtitle section slides", () => {
+    const board = parseBoard([
+      "# Architecture review",
+      "",
+      "## Architecture",
+      ":::section",
+      ":::",
+      "",
+      "## Architecture",
+      ":::section",
+      "Paths, storage, and recovery",
+      ":::",
+      "",
+      "## Request path",
+      "",
+      "Slide body",
+    ].join("\n"));
+
+    assert.deepEqual(
+      board.slides.map(({ kind, title, subtitle, body }) => ({ kind, title, subtitle, body })),
+      [
+        { kind: "section", title: "Architecture", subtitle: undefined, body: "" },
+        { kind: "section", title: "Architecture", subtitle: "Paths, storage, and recovery", body: "" },
+        { kind: "content", title: "Request path", subtitle: undefined, body: "\nSlide body" },
+      ],
+    );
+  });
+
+  it("rejects malformed section slide blocks", () => {
+    assert.throws(
+      () => parseBoard("## Architecture\n:::section\nPaths, storage, and recovery"),
+      /unterminated section block/,
+    );
+    assert.throws(
+      () => parseBoard("## Architecture\n:::section\nPaths, storage, and recovery\n:::\nSlide body"),
+      /section block must be the entire slide body/,
+    );
+  });
+
   it("parses deck-wide footer blocks from the title preamble", () => {
     const board = parseBoard([
       "# Architecture review",

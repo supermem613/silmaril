@@ -287,11 +287,64 @@ export function slideRanges(markdown: string): SlideRange[] {
 
 function parseSlides(markdown: string): SlideIR[] {
   const lines = markdown.split(/\r?\n/);
-  return slideRanges(markdown).map((range) => ({
-    id: range.id,
-    title: range.title,
-    body: lines.slice(range.bodyStart, range.regionEnd).join("\n").replace(/\n+$/, ""),
-  }));
+  return slideRanges(markdown).map((range) => {
+    const body = lines.slice(range.bodyStart, range.regionEnd).join("\n").replace(/\n+$/, "");
+    const section = parseSectionBlock(body);
+    if (section) {
+      return {
+        id: range.id,
+        title: range.title,
+        body: "",
+        kind: "section",
+        ...(section.subtitle ? { subtitle: section.subtitle } : {}),
+      };
+    }
+    return {
+      id: range.id,
+      title: range.title,
+      body,
+      kind: "content",
+    };
+  });
+}
+
+function parseSectionBlock(body: string): { subtitle?: string } | undefined {
+  const lines = body.split(/\r?\n/);
+  let opening = -1;
+  for (let index = 0; index < lines.length; index += 1) {
+    if (lines[index].trim() === "") {
+      continue;
+    }
+    if (lines[index].trim() === ":::section") {
+      opening = index;
+    }
+    break;
+  }
+  if (opening === -1) {
+    return undefined;
+  }
+
+  let closing = -1;
+  for (let index = opening + 1; index < lines.length; index += 1) {
+    if (/^:::\s*$/.test(lines[index].trim())) {
+      closing = index;
+      break;
+    }
+  }
+  if (closing === -1) {
+    throw new Error("unterminated section block");
+  }
+
+  const remaining = lines.slice(closing + 1).filter((line) => line.trim() !== "");
+  if (remaining.length > 0) {
+    throw new Error("section block must be the entire slide body");
+  }
+
+  const subtitle = lines
+    .slice(opening + 1, closing)
+    .join("\n")
+    .trim();
+  return subtitle ? { subtitle } : {};
 }
 
 function linesOutsideFences(markdown: string): string[] {

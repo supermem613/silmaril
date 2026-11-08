@@ -38,6 +38,27 @@ The subtitle is the first paragraph after the title, with blank lines allowed be
 
 The board overview shows the subtitle below the title in smaller, muted text. Long text wraps, and the overview fits the heading and slide cards without overlap. Subtitles do not change the browser title, slide count, or focused-slide view.
 
+### Section slides
+
+Use `:::section` below a `##` heading to center the heading in the middle of the slide:
+
+```markdown
+## Architecture
+:::section
+Paths, storage, and recovery
+:::
+```
+
+The block body is an optional plain-text subtitle. Leave the block empty for a title-only section slide:
+
+```markdown
+## Architecture
+:::section
+:::
+```
+
+The `:::section` block must be the entire body of the slide. An empty block creates a title-only section slide. An unterminated block or text after the closing `:::` is rejected.
+
 ### Footers
 
 Deck-wide footer blocks can add a fixed image-plus-text line to the bottom left or bottom right of every view:
