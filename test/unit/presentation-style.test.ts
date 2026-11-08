@@ -76,13 +76,14 @@ test("styles the engineering board with amber strong emphasis at accessible cont
   assert.ok(contrastRatio(lightStrong, "#FFFFFF") >= 4.5, `expected --light-strong ${lightStrong} to meet WCAG AA contrast on the light surface`);
 });
 
-test("gives each Mermaid node shape a distinct fill with no border, and gray edges", () => {
+test("uses the table-header teal independently for Mermaid nodes and leaves table-header CSS unchanged", () => {
   const rectRule = extractCssRule(engineeringTokensCss, ".engineering-mermaid .mermaid-node");
   const diamondRule = extractCssRule(engineeringTokensCss, ".engineering-mermaid .mermaid-node--diamond");
   const ellipseRule = extractCssRule(engineeringTokensCss, ".engineering-mermaid .mermaid-node--ellipse");
   assert.ok(rectRule, "expected a base mermaid node rule");
   assert.ok(diamondRule, "expected a diamond mermaid node rule");
   assert.ok(ellipseRule, "expected an ellipse mermaid node rule");
+  assert.match(engineeringTokensCss, /\.engineering-card th\s*\{[^}]*background:\s*rgba\(103,\s*211,\s*194,\s*0\.14\)[^}]*color:\s*var\(--accent-strong\)[^}]*\}/i);
   assert.match(rectRule ?? "", /fill:\s*var\(--token-mermaid-node-fill\)/i);
   assert.match(rectRule ?? "", /stroke:\s*none/i, "expected nodes to render without a border");
   assert.match(diamondRule ?? "", /fill:\s*var\(--token-mermaid-node-fill-diamond\)/i);
@@ -92,37 +93,21 @@ test("gives each Mermaid node shape a distinct fill with no border, and gray edg
 
   assert.doesNotMatch(engineeringTokensCss, /--token-mermaid-node-stroke/i, "expected per-shape border tokens to be gone");
 
-  for (const suffix of ["", "-diamond", "-ellipse"]) {
-    const fills = engineeringTokensCss.match(new RegExp(`--token-mermaid-node-fill${suffix}:\\s*(#[0-9a-f]{6})`, "gi"));
-    assert.ok(fills && fills.length >= 2, `expected dark and light values for --token-mermaid-node-fill${suffix}`);
-  }
+  assert.doesNotMatch(engineeringTokensCss, /--table-header-bg|--table-header-text/i);
+  assert.match(engineeringTokensCss, /--token-mermaid-node-fill:\s*rgba\(103,\s*211,\s*194,\s*0\.14\)/i);
+  assert.match(engineeringTokensCss, /--token-mermaid-node-fill-diamond:\s*rgba\(103,\s*211,\s*194,\s*0\.14\)/i);
+  assert.match(engineeringTokensCss, /--token-mermaid-node-fill-ellipse:\s*rgba\(103,\s*211,\s*194,\s*0\.14\)/i);
+  assert.match(engineeringTokensCss, /--token-mermaid-edge:\s*var\(--(?:dark|light)-muted\)/i);
 
-  const darkFills = ["#326D96", "#A05235", "#786628"];
-  const lightFills = ["#61A2D1", "#D58A6E", "#D1B961"];
-  assert.equal(new Set(darkFills).size, 3, "expected three distinct dark shape fills");
-  assert.equal(new Set(lightFills).size, 3, "expected three distinct light shape fills");
-  for (const fill of [...darkFills, ...lightFills]) {
-    assert.ok(engineeringTokensCss.includes(fill), `expected the tokens CSS to define the ${fill} shape fill`);
-  }
+  assert.doesNotMatch(engineeringTokensCss, /--table-header-bg|--table-header-text/i);
+  assert.match(engineeringTokensCss, /--token-mermaid-node-fill:\s*rgba\(103,\s*211,\s*194,\s*0\.14\)/i);
+  assert.match(engineeringTokensCss, /--token-mermaid-node-fill-diamond:\s*rgba\(103,\s*211,\s*194,\s*0\.14\)/i);
+  assert.match(engineeringTokensCss, /--token-mermaid-node-fill-ellipse:\s*rgba\(103,\s*211,\s*194,\s*0\.14\)/i);
 
-  // Node labels use var(--text): light on dark theme, dark on light theme.
-  // Each jewel-tone fill must keep that label at WCAG AA (>= 4.5).
-  const darkText = engineeringTokensCss.match(/--dark-text:\s*(#[0-9a-f]{6})/i)?.[1] ?? "#F3F7F6";
-  const lightText = engineeringTokensCss.match(/--light-text:\s*(#[0-9a-f]{6})/i)?.[1] ?? "#111820";
-  for (const fill of darkFills) {
-    assert.ok(contrastRatio(darkText, fill) >= 4.5, `expected dark label to meet AA on ${fill}`);
-  }
-  for (const fill of lightFills) {
-    assert.ok(contrastRatio(lightText, fill) >= 4.5, `expected light label to meet AA on ${fill}`);
-  }
+  // Edges and labels reuse the presentation muted/text tokens.
+  assert.match(engineeringTokensCss, /--token-mermaid-edge:\s*var\(--(?:dark|light)-muted\)/i);
+  assert.match(engineeringTokensCss, /--token-mermaid-label:\s*var\(--(?:dark|light)-muted\)/i);
 
-  // Edges read as neutral gray connectors, not accent-colored.
-  const darkEdge = engineeringTokensCss.match(/--token-mermaid-edge:\s*(#[0-9a-f]{6})/i)?.[1];
-  assert.ok(darkEdge, "expected a gray dark edge token");
-  const [er, eg, eb] = [1, 3, 5].map((i) => parseInt((darkEdge ?? "#000000").slice(i, i + 2), 16));
-  const maxChannel = Math.max(er, eg, eb);
-  const minChannel = Math.min(er, eg, eb);
-  assert.ok(maxChannel - minChannel <= 24, `expected a near-neutral gray edge but got ${darkEdge}`);
 });
 
 test("keeps focused-slide navigation chrome anchored to the viewport", () => {

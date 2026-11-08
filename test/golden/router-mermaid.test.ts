@@ -23,6 +23,47 @@ function buildRouterDeck(): { deck: string; content: string } {
   return { deck, content };
 }
 
+type Rect = { x: number; y: number; width: number; height: number };
+
+function rects(svg: string, className: "mermaid-node mermaid-node--rect" | "mermaid-edge-label-bg"): Rect[] {
+  const pattern = className === "mermaid-edge-label-bg"
+    ? /<rect class="mermaid-edge-label-bg" x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/g
+    : /<rect class="mermaid-node mermaid-node--rect" x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/g;
+  return [...svg.matchAll(pattern)].map((match) => ({
+    x: Number(match[1]),
+    y: Number(match[2]),
+    width: Number(match[3]),
+    height: Number(match[4]),
+  }));
+}
+
+function overlaps(a: Rect, b: Rect): boolean {
+  return a.x < b.x + b.width
+    && a.x + a.width > b.x
+    && a.y < b.y + b.height
+    && a.y + a.height > b.y;
+}
+
+function segmentCrossesRect(from: { x: number; y: number }, to: { x: number; y: number }, rect: Rect): boolean {
+  if (Math.abs(from.y - to.y) < 0.01) {
+    const lowX = Math.min(from.x, to.x);
+    const highX = Math.max(from.x, to.x);
+    return from.y > rect.y
+      && from.y < rect.y + rect.height
+      && highX > rect.x
+      && lowX < rect.x + rect.width;
+  }
+  if (Math.abs(from.x - to.x) < 0.01) {
+    const lowY = Math.min(from.y, to.y);
+    const highY = Math.max(from.y, to.y);
+    return from.x > rect.x
+      && from.x < rect.x + rect.width
+      && highY > rect.y
+      && lowY < rect.y + rect.height;
+  }
+  return false;
+}
+
 test("router flowchart parses shapes, edge labels, and dotted edges", () => {
   const first = buildRouterDeck().deck;
   const second = buildRouterDeck().deck;
@@ -80,6 +121,69 @@ test("multi-line decision text stays inside a square diamond", () => {
   const height = Number(diamond[6]) - Number(diamond[2]);
   assert.equal(width, height);
   assert.ok(width >= 140);
+});
+
+test("Duck Pond edge labels and nodes stay separated", () => {
+  const svg = renderMermaidBlock(
+    'flowchart LR\n'
+    + 'CDP["CDP<br/>persistent data"] -->|approved extract| DB["DuckDB<br/>ephemeral M365 processor"]\n'
+    + 'CS["C# control"] -->|commands| DB\n'
+    + 'DB -->|results| CDP',
+  );
+  const nodes = rects(svg, "mermaid-node mermaid-node--rect");
+  const labels = rects(svg, "mermaid-edge-label-bg");
+
+  for (const [index, node] of nodes.entries()) {
+    for (const other of nodes.slice(index + 1)) {
+      assert.equal(overlaps(node, other), false, "node rectangles must not overlap");
+    }
+  }
+  for (const label of labels) {
+    for (const node of nodes) {
+      assert.equal(overlaps(label, node), false, "edge labels must not overlap node rectangles");
+    }
+  }
+  for (const [index, label] of labels.entries()) {
+    for (const other of labels.slice(index + 1)) {
+      assert.equal(overlaps(label, other), false, "edge labels must not overlap each other");
+    }
+  }
+
+  const backEdge = [...svg.matchAll(/<path class="mermaid-edge" d="([^"]+)"/g)][2]?.[1] ?? "";
+  assert.match(backEdge, /M [\d.]+ [\d.]+ L [\d.]+ [\d.]+ L [\d.]+ [\d.]+/, "back-edge should use an orthogonal route");
+  const cdp = nodes.find((node) => node.y === 24);
+  const duckDb = nodes.find((node) => node.x === 299 || node.x === 239);
+  assert.ok(cdp, "expected CDP to occupy the target card");
+  assert.ok(duckDb, "expected DuckDB to occupy the source card");
+  const backEdgePoints = [...backEdge.matchAll(/(?:M|L) ([\d.]+) ([\d.]+)/g)]
+    .map((match) => ({ x: Number(match[1]), y: Number(match[2]) }));
+  for (let index = 1; index < backEdgePoints.length; index += 1) {
+    const from = backEdgePoints[index - 1];
+    const to = backEdgePoints[index];
+    for (const node of nodes) {
+      if (node === cdp || node === duckDb) {
+        continue;
+      }
+      assert.equal(
+        segmentCrossesRect(from, to, node),
+        false,
+        "back-edge access leg must not cross sibling cards",
+      );
+    }
+  }
+  const finalPoint = backEdgePoints.at(-1);
+  assert.ok(finalPoint, "expected the Duck Pond back-edge to reach CDP");
+  assert.equal(finalPoint?.y, cdp?.y + cdp.height, "Duck Pond results edge should enter CDP from below");
+  assert.equal(backEdgePoints[0]?.x, duckDb?.x, "Duck Pond results edge should leave DuckDB at its lower-left edge");
+  assert.equal(backEdgePoints[0]?.y, duckDb?.y + duckDb.height, "Duck Pond results edge should leave DuckDB from the bottom");
+
+  const forwardEdges = [...svg.matchAll(/<path class="mermaid-edge" d="([^"]+)"/g)].slice(0, 2);
+  for (const [, path] of forwardEdges) {
+    const move = path.match(/^M ([\d.]+) ([\d.]+)/);
+    const line = path.match(/L ([\d.]+) ([\d.]+)/);
+    assert.ok(move && line, `expected a horizontal-first LR edge: ${path}`);
+    assert.equal(Number(line[2]), Number(move[2]), `expected LR edge to exit the source horizontally: ${path}`);
+  }
 });
 
 test("router flowchart drops styling directives instead of rendering them as nodes", () => {

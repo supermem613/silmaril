@@ -61,6 +61,7 @@ type BoxSize = { width: number; height: number };
 const LINE_HEIGHT = 18;
 const NODE_MIN_HEIGHT = 44;
 const RANK_GAP = 60;
+const LR_RANK_GAP = 120;
 const NODE_GAP = 32;
 const SIDE_PAD = 24;
 const TOP_PAD = 24;
@@ -349,6 +350,7 @@ function layoutUnits(
 
   const placed = new Map<string, BoxSize & { x: number; y: number }>();
   let mainCursor = TOP_PAD;
+  const rankGap = direction === 'LR' ? LR_RANK_GAP : RANK_GAP;
   for (let r = 0; r <= maxRank; r += 1) {
     const row = rows.get(r) ?? [];
     let rankMain = 0;
@@ -372,10 +374,10 @@ function layoutUnits(
       placed.set(id, { x, y, width: d.width, height: d.height });
       crossCursor += crossExtent(id) + NODE_GAP;
     }
-    mainCursor += rankMain + RANK_GAP;
+    mainCursor += rankMain + rankGap;
   }
 
-  const mainSize = mainCursor - RANK_GAP + TOP_PAD;
+  const mainSize = mainCursor - rankGap + TOP_PAD;
   const crossSize = maxCross + SIDE_PAD * 2;
   const width = direction === 'LR' ? mainSize : crossSize;
   const height = direction === 'LR' ? crossSize : mainSize;
@@ -531,19 +533,19 @@ function layoutContainer(
   return { leaves, subs, width, height };
 }
 
-function nodeText(lines: string[], cx: number, cy: number): string {
+function nodeText(lines: string[], cx: number, cy: number, shape: NodeShape): string {
   const startY = cy - ((lines.length - 1) * LINE_HEIGHT) / 2;
   const tspans = lines
     .map((line, index) => `<tspan x="${cx}" y="${startY + index * LINE_HEIGHT + 1}">${escapeHtml(line)}</tspan>`)
     .join('');
-  return `<text class="mermaid-node-text" text-anchor="middle" dominant-baseline="middle">${tspans}</text>`;
+  return `<text class="mermaid-node-text mermaid-node-text--${shape}" text-anchor="middle" dominant-baseline="middle">${tspans}</text>`;
 }
 
 function nodeMarkup(placed: PlacedNode): string {
   const { node, x, y, width, height } = placed;
   const cx = x + width / 2;
   const cy = y + height / 2;
-  const text = nodeText(node.lines, cx, cy);
+  const text = nodeText(node.lines, cx, cy, node.shape);
 
   let shapeMarkup: string;
   if (node.shape === 'diamond') {
@@ -627,12 +629,30 @@ function anchorPoints(
   return { x1: start.x, y1: start.y, x2: toCx, y2: targetY };
 }
 
+type EdgeLabelPoint = { x: number; y: number };
+type EdgeLabelRect = EdgeLabelPoint & { width: number; height: number };
+
+function edgeLabelRect(point: EdgeLabelPoint, label: string): EdgeLabelRect {
+  const width = label.length * 6.5 + 10;
+  return { x: point.x - width / 2, y: point.y - 9, width, height: 18 };
+}
+
+function rectsOverlap(a: EdgeLabelRect, b: EdgeLabelRect): boolean {
+  return a.x < b.x + b.width
+    && a.x + a.width > b.x
+    && a.y < b.y + b.height
+    && a.y + a.height > b.y;
+}
+
 function edgeMarkupFor(
   edge: MermaidEdge,
   from: EndpointBox,
   to: EndpointBox,
   direction: LayoutDirection,
   markerId: string,
+  canvasWidth: number,
+  canvasHeight: number,
+  labelPoint?: EdgeLabelPoint,
 ): string {
   const { x1, y1, x2, y2 } = anchorPoints(from, to, direction);
   const dash = edge.style === 'dotted' ? ' stroke-dasharray="6 5"' : '';
@@ -647,16 +667,26 @@ function edgeMarkupFor(
   const tx = round(x2);
   const ty = round(y2);
   let d: string;
-  if (direction === 'LR') {
+  if (direction === 'LR' && x2 < x1) {
+    const laneY = round(canvasHeight - 12);
+    const startX = round(from.x);
+    const startY = round(from.y + from.height);
+    const targetX = round(to.x + 12);
+    const targetY = round(to.y + to.height);
+    d = `M ${startX} ${startY} L ${startX} ${laneY} L ${targetX} ${laneY} L ${targetX} ${targetY}`;
+  } else if (direction === 'LR') {
     const approach = Math.sign(dx || 1) * Math.min(18, Math.abs(dx) / 3);
     const cornerX = x2 - approach;
-    const lineDx = cornerX - x1;
-    const lineDy = y2 - y1;
-    const lineLength = Math.hypot(lineDx, lineDy);
-    const trim = Math.min(18, lineLength / 3);
-    const curveX = cornerX - (lineDx / lineLength) * trim;
-    const curveY = y2 - (lineDy / lineLength) * trim;
-    d = `M ${sx} ${sy} L ${round(curveX)} ${round(curveY)} Q ${round(cornerX)} ${ty} ${tx} ${ty}`;
+    d = `M ${sx} ${sy} L ${round(cornerX)} ${sy} Q ${round(cornerX)} ${ty} ${tx} ${ty}`;
+  } else if (direction === 'TD' && y2 < y1) {
+    const laneX = round(canvasWidth - 12);
+    const laneY = round(canvasHeight - 12);
+    const startX = round(from.x + from.width / 2);
+    const startY = round(from.y + from.height);
+    const targetX = round(to.x + to.width / 2);
+    const targetY = round(to.y);
+    const approachY = round(Math.max(TOP_PAD / 2, targetY - 18));
+    d = `M ${startX} ${startY} L ${startX} ${laneY} L ${laneX} ${laneY} L ${laneX} ${approachY} L ${targetX} ${approachY} L ${targetX} ${targetY}`;
   } else {
     const approach = Math.sign(dy || 1) * Math.min(18, Math.abs(dy) / 3);
     const cornerY = y2 - approach;
@@ -672,12 +702,99 @@ function edgeMarkupFor(
   if (!edge.label) {
     return path;
   }
-  const mx = direction === 'LR' ? round(x2 - Math.sign(dx || 1) * 30) : tx;
-  const my = direction === 'LR' ? ty : round(y2 - Math.sign(dy || 1) * 30);
+  const defaultMx = direction === 'LR' ? round(x2 - Math.sign(dx || 1) * 30) : tx;
+  const defaultMy = direction === 'LR' ? ty : round(y2 - Math.sign(dy || 1) * 30);
+  const mx = labelPoint?.x ?? defaultMx;
+  const my = labelPoint?.y ?? defaultMy;
   const labelWidth = edge.label.length * 6.5 + 10;
   const bg = `<rect class="mermaid-edge-label-bg" x="${mx - labelWidth / 2}" y="${my - 9}" width="${labelWidth}" height="18" rx="4" ry="4" />`;
   const labelText = `<text class="mermaid-edge-label" x="${mx}" y="${my + 1}" text-anchor="middle" dominant-baseline="middle">${escapeHtml(edge.label)}</text>`;
   return `${path}${bg}${labelText}`;
+}
+
+function placeLREdgeLabels(
+  edges: MermaidEdge[],
+  boxOf: (id: string) => EndpointBox | undefined,
+  leaves: PlacedNode[],
+  subBoxes: SubgraphBox[],
+  canvasWidth: number,
+  canvasHeight: number,
+  directionOfEdge: (edge: MermaidEdge) => LayoutDirection,
+): Map<MermaidEdge, EdgeLabelPoint> {
+  const points = new Map<MermaidEdge, EdgeLabelPoint>();
+  const blockedRects: EdgeLabelRect[] = [
+    ...leaves.map((leaf) => ({ x: leaf.x, y: leaf.y, width: leaf.width, height: leaf.height })),
+    ...subBoxes.map((box) => ({ x: box.x, y: box.y, width: box.width, height: box.height })),
+  ];
+  const placedLabels: EdgeLabelRect[] = [];
+
+  for (const edge of edges) {
+    if (!edge.label || directionOfEdge(edge) !== 'LR') {
+      continue;
+    }
+    const from = boxOf(edge.from);
+    const to = boxOf(edge.to);
+    if (!from || !to) {
+      continue;
+    }
+    const fromCx = from.x + from.width / 2;
+    const toCx = to.x + to.width / 2;
+    const isBackEdge = toCx < fromCx;
+
+    let preferred: EdgeLabelPoint;
+    if (isBackEdge) {
+      preferred = {
+        x: round((fromCx + toCx) / 2),
+        y: round(canvasHeight - 12),
+      };
+    } else {
+      const { x1, y1, x2, y2 } = anchorPoints(from, to, 'LR');
+      preferred = {
+        x: round((x1 + x2) / 2),
+        y: round((y1 + y2) / 2),
+      };
+    }
+
+    const labelWidth = edge.label.length * 6.5 + 10;
+    const candidateOffsets = [
+      [0, 0],
+      [0, -18],
+      [0, 18],
+      [-36, 0],
+      [36, 0],
+      [0, -36],
+      [0, 36],
+      [-72, 0],
+      [72, 0],
+      [0, -54],
+      [0, 54],
+    ];
+    let chosen: EdgeLabelPoint | undefined;
+    let chosenCost = Number.POSITIVE_INFINITY;
+    for (const [dx, dy] of candidateOffsets) {
+      const candidate = { x: preferred.x + (dx ?? 0), y: preferred.y + (dy ?? 0) };
+      if (candidate.x - labelWidth / 2 < 0
+        || candidate.x + labelWidth / 2 > canvasWidth
+        || candidate.y - 9 < 0
+        || candidate.y + 9 > canvasHeight) {
+        continue;
+      }
+      const candidateRect = edgeLabelRect(candidate, edge.label);
+      if ([...blockedRects, ...placedLabels].some((rect) => rectsOverlap(candidateRect, rect))) {
+        continue;
+      }
+      const cost = Math.abs(dx ?? 0) * 1.2 + Math.abs(dy ?? 0);
+      if (cost < chosenCost) {
+        chosen = candidate;
+        chosenCost = cost;
+      }
+    }
+    const fallback = chosen ?? preferred;
+    points.set(edge, fallback);
+    placedLabels.push(edgeLabelRect(fallback, edge.label));
+  }
+
+  return points;
 }
 
 function renderSvg(
@@ -694,6 +811,15 @@ function renderSvg(
   const markerId = `mermaid-${hash}-arrow`;
 
   const subMarkup = subBoxes.map((box) => subgraphMarkup(box)).join('');
+  const lrLabelPoints = placeLREdgeLabels(
+    edges,
+    boxOf,
+    leaves,
+    subBoxes,
+    width,
+    height,
+    directionOfEdge,
+  );
   const edgeMarkup = edges
     .map((edge) => {
       const from = boxOf(edge.from);
@@ -701,14 +827,23 @@ function renderSvg(
       if (!from || !to) {
         return '';
       }
-      return edgeMarkupFor(edge, from, to, directionOfEdge(edge), markerId);
+      return edgeMarkupFor(
+        edge,
+        from,
+        to,
+        directionOfEdge(edge),
+        markerId,
+        width,
+        height,
+        lrLabelPoints.get(edge),
+      );
     })
     .join('');
   const markup = leaves.map((leaf) => nodeMarkup(leaf)).join('');
   const containerLayer = subBoxes.length > 0 ? `${subMarkup}\n      ` : '';
 
   return `
-    <svg class="engineering-mermaid" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Mermaid diagram">
+    <svg class="engineering-mermaid" xmlns="http://www.w3.org/2000/svg" width="${round(width)}" height="${round(height)}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Mermaid diagram">
       <defs>
         <marker id="${markerId}" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse">
           <path class="mermaid-arrowhead" d="M 0.5 0.5 L 8.5 4.5 L 0.5 8.5 z" />

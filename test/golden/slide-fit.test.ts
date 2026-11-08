@@ -64,4 +64,19 @@ test("a slide card stays within the stage so content can never blow the slide si
     /min-height:\s*0/i,
     "expected the mermaid figure to be allowed to shrink below its intrinsic height",
   );
+  assert.match(
+    mermaidRule ?? "",
+    /flex-shrink:\s*0/i,
+    "expected the mermaid figure to keep its intrinsic height in the slide flex column",
+  );
+  assert.match(
+    mermaidRule ?? "",
+    /width:\s*(?:auto|max-content)/i,
+    "expected compact Mermaid diagrams to keep their intrinsic width instead of filling the whole card",
+  );
+  assert.match(
+    mermaidRule ?? "",
+    /max-width:\s*100%/i,
+    "expected wide Mermaid diagrams to cap to the card width",
+  );
 });

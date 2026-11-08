@@ -97,15 +97,17 @@ export const engineeringTokensCss = `
     --code-text: var(--dark-code-text);
     --shadow: var(--dark-shadow);
     --strong: var(--dark-strong);
-    --token-mermaid-node-fill: #326D96;
-    --token-mermaid-node-fill-diamond: #A05235;
-    --token-mermaid-node-fill-ellipse: #786628;
-    --token-mermaid-node-text: var(--text);
-    --token-mermaid-edge: #8E959E;
-    --token-mermaid-label: var(--muted);
-    --token-mermaid-subgraph-fill: rgba(142, 149, 158, 0.08);
-    --token-mermaid-subgraph-stroke: #5A616B;
-    --token-mermaid-subgraph-label: var(--muted);
+    --token-mermaid-node-fill: rgba(103, 211, 194, 0.14);
+    --token-mermaid-node-fill-diamond: rgba(103, 211, 194, 0.14);
+    --token-mermaid-node-fill-ellipse: rgba(103, 211, 194, 0.14);
+    --token-mermaid-node-text: var(--dark-accent-strong);
+    --token-mermaid-node-text-diamond: var(--dark-accent-strong);
+    --token-mermaid-node-text-ellipse: var(--dark-accent-strong);
+    --token-mermaid-edge: var(--dark-muted);
+    --token-mermaid-label: var(--dark-muted);
+    --token-mermaid-subgraph-fill: var(--dark-code-bg);
+    --token-mermaid-subgraph-stroke: var(--dark-border);
+    --token-mermaid-subgraph-label: var(--dark-muted);
   }
 
   html,
@@ -132,15 +134,17 @@ export const engineeringTokensCss = `
     --code-text: var(--light-code-text);
     --shadow: var(--light-shadow);
     --strong: var(--light-strong);
-    --token-mermaid-node-fill: #61A2D1;
-    --token-mermaid-node-fill-diamond: #D58A6E;
-    --token-mermaid-node-fill-ellipse: #D1B961;
-    --token-mermaid-node-text: var(--text);
-    --token-mermaid-edge: #767D86;
-    --token-mermaid-label: var(--muted);
-    --token-mermaid-subgraph-fill: rgba(118, 125, 134, 0.06);
-    --token-mermaid-subgraph-stroke: #A9B0BA;
-    --token-mermaid-subgraph-label: var(--muted);
+    --token-mermaid-node-fill: rgba(103, 211, 194, 0.14);
+    --token-mermaid-node-fill-diamond: rgba(103, 211, 194, 0.14);
+    --token-mermaid-node-fill-ellipse: rgba(103, 211, 194, 0.14);
+    --token-mermaid-node-text: var(--light-accent-strong);
+    --token-mermaid-node-text-diamond: var(--light-accent-strong);
+    --token-mermaid-node-text-ellipse: var(--light-accent-strong);
+    --token-mermaid-edge: var(--light-muted);
+    --token-mermaid-label: var(--light-muted);
+    --token-mermaid-subgraph-fill: var(--light-code-bg);
+    --token-mermaid-subgraph-stroke: var(--light-border);
+    --token-mermaid-subgraph-label: var(--light-muted);
     background: var(--light-bg);
   }
 
@@ -235,11 +239,13 @@ export const engineeringTokensCss = `
 
   .engineering-mermaid {
     display: block;
-    width: 100%;
+    width: auto;
+    max-width: 100%;
     height: auto;
     min-height: 0;
+    flex-shrink: 0;
     max-height: 520px;
-    margin: calc(0.25rem * var(--slide-fit, 1)) 0;
+    margin: calc(0.25rem * var(--slide-fit, 1)) auto;
   }
 
   .engineering-card .engineering-mermaid {
@@ -278,6 +284,14 @@ export const engineeringTokensCss = `
     font-size: 14px;
     font-weight: 600;
     font-family: inherit;
+  }
+
+  .engineering-mermaid .mermaid-node-text--diamond {
+    fill: var(--token-mermaid-node-text-diamond);
+  }
+
+  .engineering-mermaid .mermaid-node-text--ellipse {
+    fill: var(--token-mermaid-node-text-ellipse);
   }
 
   .engineering-mermaid .mermaid-edge {

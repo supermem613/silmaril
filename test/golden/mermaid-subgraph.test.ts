@@ -52,7 +52,7 @@ function nodeRects(svg: string): Rect[] {
 }
 
 function nodeLabels(svg: string): string[] {
-  return [...svg.matchAll(/<text class="mermaid-node-text"[^>]*>(.*?)<\/text>/g)]
+  return [...svg.matchAll(/<text class="mermaid-node-text(?: [^"]*)?"[^>]*>(.*?)<\/text>/g)]
     .map((m) => [...(m[1] ?? "").matchAll(/<tspan[^>]*>([^<]*)<\/tspan>/g)].map((t) => t[1]).join(" "));
 }
 

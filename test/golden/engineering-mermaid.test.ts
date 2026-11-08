@@ -25,5 +25,7 @@ test("renders Mermaid fences as deterministic inline SVG", () => {
 
   assert.equal(first, second);
   assert.match(first, /<svg class="engineering-mermaid"/i);
+  assert.match(first, /<svg class="engineering-mermaid"[^>]*\bwidth="[1-9]\d*"/i);
+  assert.match(first, /<svg class="engineering-mermaid"[^>]*\bheight="[1-9]\d*"/i);
   assert.match(first, /System Overview/);
 });
