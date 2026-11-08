@@ -15,6 +15,7 @@ export interface RenderOptions {
   readonly repositoryUrl?: string;
   readonly liveReload?: boolean;
   readonly resolveWikiImage?: (source: string) => string;
+  readonly resolveMermaid?: (source: string) => Promise<string>;
 }
 
 export type RenderPresentationOptions = RenderOptions;
@@ -75,17 +76,18 @@ async function renderFooterAsync(
   footer: BoardIR["footer"],
   resolveImage: (source: string) => Promise<string>,
   resolveWikiImage?: (source: string) => string,
+  resolveMermaid?: (source: string) => Promise<string>,
 ): Promise<{ left?: string; right?: string } | undefined> {
   if (!footer) {
     return undefined;
   }
   let left: string | undefined;
   if (footer.left) {
-    left = await renderMarkdownAsync(footer.left, resolveImage, resolveWikiImage);
+    left = await renderMarkdownAsync(footer.left, resolveImage, resolveWikiImage, resolveMermaid);
   }
   let right: string | undefined;
   if (footer.right) {
-    right = await renderMarkdownAsync(footer.right, resolveImage, resolveWikiImage);
+    right = await renderMarkdownAsync(footer.right, resolveImage, resolveWikiImage, resolveMermaid);
   }
   return {
     left,
@@ -138,11 +140,11 @@ export async function renderAsync(markdown: string, options: RenderOptions = {})
         id: slide.id,
         title: slide.title,
         kind: "content",
-        content: await renderMarkdownAsync(slide.body, resolveImage, options.resolveWikiImage),
+        content: await renderMarkdownAsync(slide.body, resolveImage, options.resolveWikiImage, options.resolveMermaid),
       });
     }
   }
-  const footer = await renderFooterAsync(board.footer, resolveImage, options.resolveWikiImage);
+  const footer = await renderFooterAsync(board.footer, resolveImage, options.resolveWikiImage, options.resolveMermaid);
   return assemblePresentation(board, slides, options, footer);
 }
 

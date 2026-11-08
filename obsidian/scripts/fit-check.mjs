@@ -50,12 +50,12 @@ async function noRejectedApproaches() {
       "import { renderPresentationFromMarkdownAsync } from '../../src/pipeline/renderFile.js';",
     ),
   );
-  assert.ok(adapter.includes('await renderPresentationFromMarkdownAsync(markdown, sourcePath)'));
+  assert.ok(adapter.includes('resolveMermaid: renderMermaidInObsidian'));
+  assert.ok(adapter.includes("import mermaid from 'mermaid';"));
+  assert.ok(adapter.includes('mermaid.initialize'));
+  assert.ok(adapter.includes('mermaid.render'));
 
   const rejected = [
-    /mermaid\.initialize/i,
-    /mermaid\.run/i,
-    /from\s+['"]mermaid['"]/i,
     /serveCommand/,
     /child_process/,
     /silmaril\s+serve/i,

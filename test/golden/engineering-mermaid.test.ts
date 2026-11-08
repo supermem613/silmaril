@@ -6,6 +6,7 @@ import test from "node:test";
 import { inlineMarkdown } from "../../src/pipeline/inline.js";
 import { parseBoard } from "../../src/pipeline/parse.js";
 import { renderMarkdown } from "../../src/pipeline/render.js";
+import { renderMarkdownAsync } from "../../src/pipeline/render.js";
 import { buildPresentation } from "../../src/presentation/index.js";
 
 test("renders Mermaid fences as deterministic inline SVG", () => {
@@ -28,4 +29,56 @@ test("renders Mermaid fences as deterministic inline SVG", () => {
   assert.match(first, /<svg class="engineering-mermaid"[^>]*\bwidth="[1-9]\d*"/i);
   assert.match(first, /<svg class="engineering-mermaid"[^>]*\bheight="[1-9]\d*"/i);
   assert.match(first, /System Overview/);
+});
+
+test("uses Mermaid layout groups instead of hand-built node rectangles", async () => {
+  const source = [
+    "```mermaid",
+    "flowchart LR",
+    'CDP["CDP<br/>persistent data"] -->|approved extract| DB["DuckDB<br/>ephemeral M365 processor"]',
+    'CS["C# control"] -->|commands| DB',
+    "DB -->|results| CDP",
+    "```",
+  ].join("\n");
+
+  const html = await renderMarkdownAsync(source, async () => "");
+
+  assert.match(html, /<g class="nodes"/);
+  assert.match(html, /<g class="[^"]*\bedgePaths\b[^"]*"/);
+  assert.doesNotMatch(html, /mermaid-node mermaid-node--rect/);
+
+  const viewBox = html.match(/viewBox="[+-]?[\d.]+ [+-]?[\d.]+ ([\d.]+) ([\d.]+)"/)?.slice(1);
+  const dimensions = html.match(/<svg[^>]*width="(\d+)"[^>]*height="(\d+)"/)?.slice(1);
+  assert.ok(viewBox, "expected a real Mermaid viewBox");
+  assert.ok(dimensions, "expected intrinsic Mermaid width and height");
+  assert.equal(Number(dimensions?.[0]), Math.ceil(Number(viewBox?.[0])));
+  assert.equal(Number(dimensions?.[1]), Math.ceil(Number(viewBox?.[1])));
+});
+
+test("preserves dollar replacement tokens in real Mermaid labels", async () => {
+  const source = [
+    "```mermaid",
+    "flowchart LR",
+    'A["cost $& value"] --> B["next"]',
+    "```",
+  ].join("\n");
+
+  const html = await renderMarkdownAsync(source, async () => "");
+
+  assert.match(html, /\$&(?:amp;)?/);
+  assert.doesNotMatch(html, /data-silmaril-mermaid/);
+});
+
+test("real Mermaid rendering is deterministic for repeated source", async () => {
+  const source = [
+    "```mermaid",
+    "flowchart LR",
+    'A["First"] --> B["Second"]',
+    "```",
+  ].join("\n");
+
+  const first = await renderMarkdownAsync(source, async () => "");
+  const second = await renderMarkdownAsync(source, async () => "");
+
+  assert.equal(first, second);
 });

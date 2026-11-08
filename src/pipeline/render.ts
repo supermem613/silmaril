@@ -3,6 +3,7 @@ import type Token from "markdown-it/lib/token.mjs";
 import hljs from "highlight.js";
 import { parseMarkdownSegments } from "./columns.js";
 import { renderMermaidBlock } from "./mermaid.js";
+import { renderMermaidBlockAsync } from "./mermaidReal.js";
 
 const DEFAULT_RENDERER_OPTIONS = {
   html: false,
@@ -43,6 +44,7 @@ function classifyHref(href: string): ClassifiedHref {
 function createMarkdownRenderer(
   resolveImage?: (source: string) => string,
   resolveWikiImage?: (source: string) => string,
+  resolveMermaid?: (source: string) => string,
 ): MarkdownIt {
   const markdownIt = new MarkdownIt(DEFAULT_RENDERER_OPTIONS);
 
@@ -112,6 +114,9 @@ function createMarkdownRenderer(
     const content = token?.content ?? "";
     const language = info.split(/\s+/)[0] ?? "";
     if (language.toLowerCase() === "mermaid") {
+      if (resolveMermaid) {
+        return resolveMermaid(content);
+      }
       return renderMermaidBlock(content);
     }
     return renderCodeBlock(content, language);
@@ -258,9 +263,33 @@ export async function renderMarkdownAsync(
   markdown: string,
   resolveImage: (source: string) => Promise<string>,
   resolveWikiImage?: (source: string) => string,
+  resolveMermaid?: (source: string) => Promise<string>,
 ): Promise<string> {
-  const renderer = createMarkdownRenderer(undefined, resolveWikiImage);
+  const mermaidSources: string[] = [];
+  const renderer = createMarkdownRenderer(
+    undefined,
+    resolveWikiImage,
+    (source) => {
+      const index = mermaidSources.length;
+      mermaidSources.push(source);
+      return `<div data-silmaril-mermaid="${index}"></div>`;
+    },
+  );
   const segments = parseSegments(markdown, renderer);
   await resolveImages(segments, resolveImage);
-  return renderSegments(segments, renderer);
+  let html = renderSegments(segments, renderer);
+  for (let index = 0; index < mermaidSources.length; index += 1) {
+    const source = mermaidSources[index];
+    const mermaidSvg = resolveMermaid
+      ? await resolveMermaid(source)
+      : await renderMermaidBlockAsync(source);
+    if (!mermaidSvg) {
+      throw new Error("Real Mermaid rendering is unavailable. Install or run a supported browser engine.");
+    }
+    html = html.replace(
+      `<div data-silmaril-mermaid="${index}"></div>`,
+      () => mermaidSvg,
+    );
+  }
+  return html;
 }

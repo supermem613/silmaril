@@ -8,8 +8,20 @@ import { dirname, join, relative } from 'node:path';
 
 import type { TFile } from 'obsidian';
 
-import { createWikiImageResolver, renderDeck } from '../src/renderAdapter';
+import { createWikiImageResolver, normalizeMermaidSvg, renderDeck } from '../src/renderAdapter';
 import { renderPresentationFromMarkdownAsync } from '../../src/pipeline/renderFile';
+
+test('normalizes Mermaid SVG attributes without duplicate classes or origin-subtracted dimensions', () => {
+  const source = '<svg id=\"mermaid-test\" xmlns=\"http://www.w3.org/2000/svg\" class=\"flowchart\" viewBox=\"4 4 837.8984375 96.19999694824219\" width=\"100%\" height=\"100%\" role=\"graphics-document document\" aria-roledescription=\"flowchart-v2\"><g class=\"nodes\"></g></svg>';
+  const normalized = normalizeMermaidSvg(source);
+
+  const start = normalized.match(/^<svg([^>]*)>/)?.[1] ?? "";
+  assert.equal((start.match(/class=/g) ?? []).length, 1);
+  assert.match(start, /class="engineering-mermaid"/);
+  assert.match(start, /width="838"/);
+  assert.match(start, /height="97"/);
+  assert.doesNotMatch(start, /role="graphics-document document"/);
+});
 
 test('renderDeck returns html and slideCount for a multi-slide deck', async () => {
   const fixture = '# Deck\n\n## Slide One\n\nAlpha body\n\n## Slide Two\n\nBeta body';
