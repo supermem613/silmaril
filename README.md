@@ -28,6 +28,25 @@ The first paragraph directly below the `#` title is an optional plain-text subti
 
 Slide content supports inline highlight with `==text==` and strikethrough with `~~text~~`.
 
+To make a centered section slide, add a `:::section` block below the slide heading:
+
+```markdown
+## Architecture
+:::section
+Paths, storage, and recovery
+:::
+```
+
+Leave the block empty for a title-only section slide:
+
+```markdown
+## Architecture
+:::section
+:::
+```
+
+The section subtitle is plain text. It supports line breaks but not Markdown formatting.
+
 Deck-wide footers can appear in the title preamble:
 
 ```markdown

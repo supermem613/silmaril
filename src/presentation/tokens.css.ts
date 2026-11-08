@@ -400,6 +400,38 @@ export const engineeringTokensCss = `
     color: var(--text);
   }
 
+  .engineering-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 1000px;
+    height: 700px;
+    box-sizing: border-box;
+    text-align: center;
+    background: #000000;
+    color: var(--text);
+    font-family: "Segoe UI Variable Text", "Aptos", "Segoe UI", sans-serif;
+  }
+
+  .engineering-section h2 {
+    margin: 0;
+    font-family: "Segoe UI Variable Display", "Aptos Display", "Segoe UI", sans-serif;
+    font-size: 5rem;
+    font-weight: 650;
+    letter-spacing: -0.035em;
+    line-height: 1.05;
+    color: var(--text);
+  }
+
+  .engineering-section__subtitle {
+    max-width: 760px;
+    margin: 1.5rem 0 0;
+    color: var(--dark-muted);
+    font-size: 1.5rem;
+    line-height: 1.35;
+  }
+
   body:not(:has(.step.active[data-id="overview"])) .step:not(.active) {
     visibility: hidden;
     opacity: 0 !important;
@@ -502,7 +534,9 @@ export const engineeringTokensCss = `
   }
 
   body:has(.step.active[data-id="overview"]) .step:not(.overview):hover .engineering-card,
-  body:has(.step.active[data-id="overview"]) .step:not(.overview):focus-visible .engineering-card {
+  body:has(.step.active[data-id="overview"]) .step:not(.overview):focus-visible .engineering-card,
+  body:has(.step.active[data-id="overview"]) .step:not(.overview):hover .engineering-section,
+  body:has(.step.active[data-id="overview"]) .step:not(.overview):focus-visible .engineering-section {
     transform: translateY(-12px) scale(1.015);
     border-color: var(--accent);
     box-shadow: 0 28px 60px var(--shadow);

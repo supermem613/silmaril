@@ -168,6 +168,27 @@ test("omits the in-browser editor and live reload from the default build", () =>
   assert.doesNotMatch(plain, /__silmaril\/livereload/i, "expected the default build to omit the live-reload client");
 });
 
+test("centers title-only and subtitle section slides", () => {
+  const slides: PresentationSlide[] = [
+    { id: "architecture", title: "Architecture", kind: "section" },
+    { id: "request-path", title: "Request path", kind: "section", subtitle: "Paths, storage, and recovery" },
+  ];
+  const html = buildPresentation(slides, { documentTitle: "Sections" });
+
+  assert.match(
+    html,
+    /<div class="engineering-section" data-theme="dark">\s*<h2>Architecture<\/h2>\s*<\/div>/,
+  );
+  assert.match(
+    html,
+    /<div class="engineering-section" data-theme="dark">\s*<h2>Request path<\/h2>\s*<p class="engineering-section__subtitle">Paths, storage, and recovery<\/p>\s*<\/div>/,
+  );
+  assert.match(
+    engineeringTokensCss,
+    /\.engineering-section\s*\{[^}]*align-items:\s*center;[^}]*justify-content:\s*center;[^}]*text-align:\s*center;/,
+  );
+});
+
 test("enables the live-reload client only when requested", () => {
   const slides: PresentationSlide[] = [
     { id: "slide-1", title: "Slide 1", content: "<p>Slide 1</p>" },

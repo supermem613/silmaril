@@ -13,7 +13,9 @@ import {
 export interface PresentationSlide {
   readonly id: string;
   readonly title: string;
-  readonly content: string;
+  readonly kind?: "content" | "section";
+  readonly content?: string;
+  readonly subtitle?: string;
 }
 
 export interface PresentationOptions {
@@ -147,10 +149,15 @@ export function buildPresentation(
       x: placements[index].x,
       y: placements[index].y,
       z: 0,
-      content: `
+      content: slide.kind === "section" ? `
+        <div class="engineering-section" data-theme="dark">
+          <h2>${escapeHtml(slide.title)}</h2>${slide.subtitle ? `
+          <p class="engineering-section__subtitle">${escapeSubtitle(slide.subtitle)}</p>` : ""}
+        </div>
+      ` : `
         <div class="engineering-card" data-theme="dark">
           <h2>${escapeHtml(slide.title)}</h2>
-          <div class="engineering-card__content" data-slide-content>${slide.content}</div>
+          <div class="engineering-card__content" data-slide-content>${slide.content ?? ""}</div>
         </div>
       `,
     })),
