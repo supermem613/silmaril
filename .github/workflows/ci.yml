@@ -9,6 +9,8 @@ on:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: "0"
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
