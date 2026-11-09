@@ -1,6 +1,8 @@
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { createHash } from "node:crypto";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 function findEdgeExecutable(): string | undefined {
   const candidates = [
@@ -14,6 +16,51 @@ function findEdgeExecutable(): string | undefined {
     "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
   ];
   return candidates.find((candidate) => existsSync(candidate));
+}
+
+async function findPlaywrightExecutable(): Promise<string | undefined> {
+  try {
+    const { chromium } = await import("playwright-core");
+    const executable = chromium.executablePath();
+    if (existsSync(executable)) {
+      return executable;
+    }
+  } catch {
+    // Continue with known browser-cache layouts when the package API cannot resolve a browser.
+  }
+
+  const cacheRoots = [
+    join(homedir(), "AppData", "Local", "ms-playwright"),
+    join(homedir(), ".cache", "ms-playwright"),
+    join(homedir(), "Library", "Caches", "ms-playwright"),
+  ];
+  for (const cacheRoot of cacheRoots) {
+    if (!existsSync(cacheRoot)) {
+      continue;
+    }
+    const revisions = readdirSync(cacheRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && (
+        entry.name.startsWith("chromium-")
+        || entry.name.startsWith("chromium_headless_shell-")
+      ))
+      .sort((left, right) => right.name.localeCompare(left.name));
+    for (const revision of revisions) {
+      const candidates = [
+        join(cacheRoot, revision.name, "chrome-win64", "chrome.exe"),
+        join(cacheRoot, revision.name, "chrome-win", "chrome.exe"),
+        join(cacheRoot, revision.name, "chrome-linux", "chrome"),
+        join(cacheRoot, revision.name, "chrome-linux64", "chrome"),
+        join(cacheRoot, revision.name, "chrome-mac", "Chromium.app", "Contents", "MacOS", "Chromium"),
+        join(cacheRoot, revision.name, "chrome-headless-shell-win64", "chrome-headless-shell.exe"),
+        join(cacheRoot, revision.name, "chrome-headless-shell-linux64", "chrome-headless-shell"),
+      ];
+      const executable = candidates.find((candidate) => existsSync(candidate));
+      if (executable) {
+        return executable;
+      }
+    }
+  }
+  return undefined;
 }
 
 function normalizeMermaidSvg(svg: string): string {
@@ -43,7 +90,7 @@ function normalizeMermaidSvg(svg: string): string {
 }
 
 export async function renderMermaidBlockAsync(content: string): Promise<string | undefined> {
-  const executablePath = findEdgeExecutable();
+  const executablePath = findEdgeExecutable() ?? await findPlaywrightExecutable();
   if (!executablePath) {
     return undefined;
   }

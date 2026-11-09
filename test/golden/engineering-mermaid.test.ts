@@ -32,6 +32,7 @@ test("renders Mermaid fences as deterministic inline SVG", () => {
 });
 
 test("uses Mermaid layout groups instead of hand-built node rectangles", async () => {
+  // Guards against CI hosts that have Playwright but no named system browser.
   const source = [
     "```mermaid",
     "flowchart LR",
