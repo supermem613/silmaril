@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { inlineMarkdown } from "../../src/pipeline/inline.js";
+import { renderMermaidBlockAsync, type MermaidRenderDiagnostic } from "../../src/pipeline/mermaidReal.js";
 import { parseBoard } from "../../src/pipeline/parse.js";
 import { renderMarkdown } from "../../src/pipeline/render.js";
 import { renderMarkdownAsync } from "../../src/pipeline/render.js";
@@ -42,7 +43,23 @@ test("uses Mermaid layout groups instead of hand-built node rectangles", async (
     "```",
   ].join("\n");
 
-  const html = await renderMarkdownAsync(source, async () => "");
+  const diagnostics: MermaidRenderDiagnostic[] = [];
+  const html = await renderMarkdownAsync(
+    source,
+    async () => "",
+    undefined,
+    async (mermaidSource) => (
+      await renderMermaidBlockAsync(mermaidSource, (diagnostic) => {
+        diagnostics.push(diagnostic);
+        process.stderr.write(`SILMARIL_MERMAID_DIAGNOSTIC ${JSON.stringify(diagnostic)}\n`);
+      })
+    ) ?? "",
+  );
+
+  const success = diagnostics.find((diagnostic) => diagnostic.stage === "success");
+  assert.ok(success, "expected a successful Mermaid stage diagnostic");
+  assert.ok(success.executablePath, "expected the selected browser executable");
+  assert.equal(success.executableExists, true);
 
   assert.match(html, /<g class="nodes"/);
   assert.match(html, /<g class="[^"]*\bedgePaths\b[^"]*"/);
