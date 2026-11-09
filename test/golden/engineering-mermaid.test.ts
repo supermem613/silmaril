@@ -58,6 +58,7 @@ test("uses Mermaid layout groups instead of hand-built node rectangles", async (
 
   const success = diagnostics.find((diagnostic) => diagnostic.stage === "success");
   assert.ok(success, "expected a successful Mermaid stage diagnostic");
+  assert.equal(success.browserSource, "playwright");
   assert.ok(success.executablePath, "expected the selected browser executable");
   assert.equal(success.executableExists, true);
 

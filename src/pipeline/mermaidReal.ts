@@ -74,6 +74,7 @@ async function findPlaywrightExecutable(): Promise<BrowserSelection | undefined>
     join(homedir(), "AppData", "Local", "ms-playwright"),
     join(homedir(), ".cache", "ms-playwright"),
     join(homedir(), "Library", "Caches", "ms-playwright"),
+    join(process.cwd(), "node_modules", "playwright-core", ".local-browsers"),
   ];
   for (const cacheRoot of cacheRoots) {
     if (!existsSync(cacheRoot)) {
@@ -150,7 +151,7 @@ export async function renderMermaidBlockAsync(
     nodeVersion: process.version,
     playwrightBrowsersPath: process.env.PLAYWRIGHT_BROWSERS_PATH,
   });
-  const selection = findEdgeExecutable() ?? await findPlaywrightExecutable();
+  const selection = await findPlaywrightExecutable() ?? findEdgeExecutable();
   emit({
     stage: "browser-selection",
     browserSource: selection?.browserSource ?? "none",
