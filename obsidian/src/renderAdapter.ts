@@ -177,16 +177,23 @@ async function renderMermaidInObsidian(source: string): Promise<string> {
   return normalizeMermaidSvg(result.svg);
 }
 
+export async function renderStandaloneDeck(
+  markdown: string,
+  sourcePath: string,
+  resolveWikiImage?: (source: string) => string,
+) {
+  return renderPresentationFromMarkdownAsync(markdown, sourcePath, {
+    resolveWikiImage,
+    resolveMermaid: renderMermaidInObsidian,
+  });
+}
+
 export async function renderDeck(
   markdown: string,
   sourcePath: string,
   resolveWikiImage?: (source: string) => string,
 ) {
-  const presentation = await renderPresentationFromMarkdownAsync(markdown, sourcePath, {
-    resolveWikiImage,
-    resolveMermaid: renderMermaidInObsidian,
-  });
-
+  const presentation = await renderStandaloneDeck(markdown, sourcePath, resolveWikiImage);
   return {
     html: addPreviewBridge(presentation.html),
     slideCount: presentation.slideCount,

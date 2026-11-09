@@ -44,13 +44,16 @@ await build({
   format: 'esm',
   platform: 'node',
   target: 'node22',
+  external: ['playwright-core'],
   outfile: fileURLToPath(harnessUrl),
   stdin: {
     contents: `
       import { FileSystemAdapter } from 'obsidian';
+      import mermaid from 'mermaid';
       import { SilmarilDeckView, slideStateForCursorLine } from './src/deckView.ts';
       import SilmarilPlugin from './src/main.ts';
-      export { FileSystemAdapter, SilmarilDeckView, slideStateForCursorLine, SilmarilPlugin };
+      import { renderPresentationFromMarkdownAsync } from '../src/pipeline/renderFile.ts';
+      export { FileSystemAdapter, mermaid, SilmarilDeckView, slideStateForCursorLine, SilmarilPlugin, renderPresentationFromMarkdownAsync };
     `,
     loader: 'ts',
     resolveDir: fileURLToPath(new URL('..', import.meta.url)),
@@ -75,7 +78,7 @@ await build({
   ],
 });
 
-const { FileSystemAdapter, SilmarilDeckView, slideStateForCursorLine, SilmarilPlugin } =
+const { FileSystemAdapter, mermaid, SilmarilDeckView, slideStateForCursorLine, SilmarilPlugin, renderPresentationFromMarkdownAsync } =
   await import(
     `${pathToFileURL(fileURLToPath(harnessUrl)).href}?test=${Date.now()}`
   );
@@ -419,6 +422,61 @@ test('refreshes after paint, restores the active slide, and keeps focus changes 
 
   await view.onClose();
   assert.deepEqual(globalThis.__silmarilNotices, []);
+});
+
+test('publishes standalone Mermaid SVG using the Obsidian renderer when external rendering is unavailable', async (t) => {
+  const browser = await chromium.launch({ channel: 'msedge', headless: true });
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  await page.setContent('<!doctype html><html><body></body></html>');
+  await page.addScriptTag({
+    path: fileURLToPath(new URL('../node_modules/mermaid/dist/mermaid.min.js', import.meta.url)),
+  });
+  let options;
+  const renderedSources = [];
+  t.mock.method(mermaid, 'initialize', (configuration) => {
+    options = configuration;
+  });
+  // The host Mermaid API runs in Obsidian's DOM. Use a real browser at that boundary.
+  t.mock.method(mermaid, 'render', (id, source) => {
+    renderedSources.push(source);
+    return page.evaluate(async ({ id, source, options }) => {
+      window.mermaid.initialize(options);
+      const { svg } = await window.mermaid.render(id, source);
+      return { svg };
+    }, { id, source, options });
+  });
+  t.mock.method(chromium, 'launch', () => {
+    throw new Error('External browser rendering is unavailable in this plugin host.');
+  });
+  const originalDocument = globalThis.document;
+  t.after(() => { globalThis.document = originalDocument; });
+  globalThis.document = {};
+  globalThis.window = {};
+  globalThis.__silmarilNotices = [];
+  const source = 'flowchart LR\nA[Author] --> B[Published HTML]';
+  const sourceView = createSourceView('talks/deck.md', `## Publish\n\n\`\`\`mermaid\n${source}\n\`\`\``);
+  sourceView.file.basename = 'deck';
+  const adapter = new TestAdapter();
+  const plugin = new SilmarilPlugin({
+    vault: { adapter },
+    workspace: { getActiveViewOfType: () => sourceView },
+    metadataCache: { getFirstLinkpathDest: () => null },
+  });
+
+  await plugin.publishHtml();
+
+  assert.deepEqual(globalThis.__silmarilNotices, ['Silmaril published to talks/deck.html']);
+  const html = adapter.files.get('talks/deck.html');
+  assert.deepEqual(renderedSources, [`${source}\n`]);
+  const standalone = await renderPresentationFromMarkdownAsync('## Reference', 'reference.md');
+  const scripts = (value) => value.match(/<script\b[^>]*>[\s\S]*?<\/script>/g);
+  assert.deepEqual(scripts(html), scripts(standalone.html));
+  await page.setContent(html);
+  const diagram = page.locator('svg.engineering-mermaid');
+  assert.equal(await diagram.locator('.nodes .node').count(), 2);
+  assert.deepEqual(await diagram.locator('.nodes .node').allTextContents(), ['Author', 'Published HTML']);
+  assert.equal(await diagram.locator('.edgePaths path').count(), 1);
 });
 
 test('publishes native vault images that decode after the attachment is removed', async (t) => {
