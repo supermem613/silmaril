@@ -50,28 +50,28 @@ test("serve renders the deck with the live-reload client wired in", async () => 
     assert.doesNotMatch(html, /data-editor/i, "expected the served page to omit the in-browser editor");
     assert.doesNotMatch(html, /data-silmaril-refresh/i, "expected the served page to omit a refresh button");
   });
+});
 
-  test("serve renders a scrolling document for a document directive", async () => {
-    const document = [
-      "# Architecture review",
-      "",
-      ":::silmaril document",
-      ":::",
-      "",
-      "## Context",
-      "",
-      "Natural-height body.",
-    ].join("\n");
+test("serve renders a scrolling document for a document directive", async () => {
+  const document = [
+    "# Architecture review",
+    "",
+    ":::silmaril document",
+    ":::",
+    "",
+    "## Context",
+    "",
+    "Natural-height body.",
+  ].join("\n");
 
-    await withServer(async (baseUrl) => {
-      const response = await fetch(`${baseUrl}/`);
-      assert.equal(response.status, 200);
-      const html = await response.text();
-      assert.match(html, /<body class="engineering-document">/);
-      assert.match(html, /data-silmaril-document/);
-      assert.doesNotMatch(html, /<div id="impress"/);
-    }, document);
-  });
+  await withServer(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/`);
+    assert.equal(response.status, 200);
+    const html = await response.text();
+    assert.match(html, /<body class="engineering-document">/);
+    assert.match(html, /data-silmaril-document/);
+    assert.doesNotMatch(html, /<div id="impress"/);
+  }, document);
 });
 
 test("serve exposes a live-reload event stream", async () => {

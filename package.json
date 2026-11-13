@@ -1,6 +1,6 @@
 {
   "name": "silmaril",
-  "version": "0.9.7",
+  "version": "0.9.8",
   "description": "A deterministic Markdown pipeline for presentation and scrolling-document HTML",
   "repository": {
     "type": "git",
