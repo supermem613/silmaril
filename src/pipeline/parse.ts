@@ -6,10 +6,96 @@ export function parseBoard(markdown: string, fallbackTitle = "Presentation"): Bo
     id: slugify(title),
     rawMarkdown: markdown,
     title,
+    type: parseSilmarilType(markdown),
     subtitle: parseSubtitle(markdown),
     footer: parseFooter(markdown),
     slides: parseSlides(markdown),
   };
+}
+
+function parseSilmarilType(markdown: string): "presentation" | "document" {
+  const lines = markdown.split(/\r?\n/);
+  let slideIndex = lines.length;
+  let inFence = false;
+  let fenceCharacter: string | null = null;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const fence = lines[index].trim().match(/^(`{3,}|~{3,})/);
+    if (fence) {
+      const character = fence[1][0];
+      if (!inFence) {
+        inFence = true;
+        fenceCharacter = character;
+      } else if (fenceCharacter === character) {
+        inFence = false;
+        fenceCharacter = null;
+      }
+      continue;
+    }
+    if (inFence) {
+      continue;
+    }
+    if (/^##\s+/.test(lines[index])) {
+      slideIndex = index;
+      break;
+    }
+  }
+
+  let found: "presentation" | "document" | undefined;
+  inFence = false;
+  fenceCharacter = null;
+
+  for (let index = 0; index < slideIndex; index += 1) {
+    const fence = lines[index].trim().match(/^(`{3,}|~{3,})/);
+    if (fence) {
+      const character = fence[1][0];
+      if (!inFence) {
+        inFence = true;
+        fenceCharacter = character;
+      } else if (fenceCharacter === character) {
+        inFence = false;
+        fenceCharacter = null;
+      }
+      continue;
+    }
+    if (inFence) {
+      continue;
+    }
+
+    const opening = lines[index].trim().match(/^:::silmaril(?:\s+(.*))?\s*$/);
+    if (!opening) {
+      continue;
+    }
+    if (found) {
+      throw new Error("duplicate silmaril directive");
+    }
+
+    const requestedType = (opening[1] ?? "").trim();
+    if (!requestedType) {
+      throw new Error("silmaril type is required");
+    }
+    if (requestedType !== "presentation" && requestedType !== "document") {
+      throw new Error(`unknown silmaril type: ${requestedType}`);
+    }
+
+    let closingIndex = -1;
+    for (let closingCandidate = index + 1; closingCandidate < slideIndex; closingCandidate += 1) {
+      if (/^:::\s*$/.test(lines[closingCandidate].trim())) {
+        closingIndex = closingCandidate;
+        break;
+      }
+    }
+    if (closingIndex === -1) {
+      throw new Error(`unterminated silmaril ${requestedType} directive`);
+    }
+    const directiveBody = lines.slice(index + 1, closingIndex).filter((line) => line.trim() !== "");
+    if (directiveBody.length > 0) {
+      throw new Error(`silmaril ${requestedType} directive must be empty`);
+    }
+    found = requestedType;
+  }
+
+  return found ?? "presentation";
 }
 
 function parseTitle(markdown: string): string | null {
@@ -93,6 +179,7 @@ function parseSubtitle(markdown: string): string | undefined {
 function stripFooterBlocks(lines: readonly string[]): string[] {
   const cleaned: string[] = [];
   let inFooter = false;
+  let inSilmaril = false;
   let inFence = false;
   let fenceCharacter: string | null = null;
   for (const line of lines) {
@@ -113,6 +200,14 @@ function stripFooterBlocks(lines: readonly string[]): string[] {
       cleaned.push(line);
       continue;
     }
+    if (/^:::silmaril(?:\s+.*)?\s*$/.test(line.trim())) {
+      inSilmaril = true;
+      continue;
+    }
+    if (inSilmaril && /^:::\s*$/.test(line.trim())) {
+      inSilmaril = false;
+      continue;
+    }
     if (/^:::footer\s+(left|right)\s*$/.test(line.trim())) {
       inFooter = true;
       continue;
@@ -121,7 +216,7 @@ function stripFooterBlocks(lines: readonly string[]): string[] {
       inFooter = false;
       continue;
     }
-    if (!inFooter) {
+    if (!inFooter && !inSilmaril) {
       cleaned.push(line);
     }
   }

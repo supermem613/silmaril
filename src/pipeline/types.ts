@@ -10,6 +10,7 @@ export interface BoardIR {
   id: string;
   rawMarkdown: string;
   title: string;
+  type: "presentation" | "document";
   subtitle?: string;
   footer?: {
     left?: string;

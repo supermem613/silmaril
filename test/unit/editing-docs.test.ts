@@ -25,3 +25,21 @@ test('documentation covers the serve, live reload, version, and emphasis workflo
     assert.match(content, /WCAG AA/i, `${name} should mention WCAG AA contrast`);
   }
 });
+
+test('documentation covers the output directive and presentation default', () => {
+  const readme = readDoc('../../README.md');
+  const authoring = readDoc('../../docs/authoring.md');
+  const schema = readDoc('../../docs/schema.md');
+
+  for (const [name, content] of [
+    ['README.md', readme],
+    ['docs/authoring.md', authoring],
+  ] as const) {
+    assert.match(content, /:::silmaril document/, `${name} should document the document directive`);
+    assert.match(content, /:::silmaril presentation/, `${name} should document the explicit presentation directive`);
+    assert.match(content, /presentation remains the default|defaults to presentation|without an output directive|omit the directive/i, `${name} should document the presentation default`);
+  }
+
+  assert.match(schema, /"type": "presentation"/, 'schema should document the publish output type');
+  assert.match(schema, /`type` is `"presentation"`/, 'schema should explain presentation and document types');
+});

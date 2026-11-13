@@ -59,7 +59,7 @@ export async function publishCommand(input: string, opts: PublishOptions, deps: 
     const outputPath = opts.out
       ? (isAbsolute(opts.out) ? opts.out : resolve(process.cwd(), opts.out))
       : defaultOutputPath(inputPath);
-    const { html, slideCount } = await renderPresentationFromMarkdownAsync(readFileSync(inputPath, "utf8"), inputPath, {
+    const { html, slideCount, type } = await renderPresentationFromMarkdownAsync(readFileSync(inputPath, "utf8"), inputPath, {
       version: PACKAGE_VERSION,
       repositoryUrl: PACKAGE_REPOSITORY_URL,
     });
@@ -81,6 +81,7 @@ export async function publishCommand(input: string, opts: PublishOptions, deps: 
       outputPath,
       byteCount: Buffer.byteLength(html, "utf8"),
       slideCount,
+      type,
       open,
     });
     process.exit(0);

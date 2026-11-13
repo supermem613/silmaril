@@ -3,6 +3,47 @@ import { describe, it } from "node:test";
 import { parseBoard } from "../../src/pipeline/parse.js";
 
 describe("parseBoard", () => {
+  it("defaults to presentation and accepts explicit output types", () => {
+    assert.equal(parseBoard("# Deck\n\n## First\n\nBody").type, "presentation");
+    assert.equal(parseBoard([
+      "# Deck",
+      "",
+      ":::silmaril document",
+      ":::",
+      "",
+      "## First",
+      "Body",
+    ].join("\n")).type, "document");
+    assert.equal(parseBoard([
+      "# Deck",
+      "",
+      ":::silmaril presentation",
+      ":::",
+      "",
+      "## First",
+      "Body",
+    ].join("\n")).type, "presentation");
+  });
+
+  it("rejects invalid Silmaril output directives", () => {
+    assert.throws(
+      () => parseBoard("# Deck\n\n:::silmaril\n:::\n\n## First"),
+      /silmaril type is required/,
+    );
+    assert.throws(
+      () => parseBoard("# Deck\n\n:::silmaril poster\n:::\n\n## First"),
+      /unknown silmaril type: poster/,
+    );
+    assert.throws(
+      () => parseBoard("# Deck\n\n:::silmaril document\n\n## First"),
+      /unterminated silmaril document directive/,
+    );
+    assert.throws(
+      () => parseBoard("# Deck\n\n:::silmaril document\n:::\n\n:::silmaril presentation\n:::\n\n## First"),
+      /duplicate silmaril directive/,
+    );
+  });
+
   it("maps the document title and ordered slide headings", () => {
     const board = parseBoard([
       "# Board Title",

@@ -1,7 +1,7 @@
 {
   "name": "silmaril",
-  "version": "0.8.4",
-  "description": "A trivial, no-frills Markdown-to-slides pipeline for engineers",
+  "version": "0.9.7",
+  "description": "A deterministic Markdown pipeline for presentation and scrolling-document HTML",
   "repository": {
     "type": "git",
     "url": "https://github.com/supermem613/silmaril"

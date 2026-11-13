@@ -7,6 +7,7 @@ import { validateBuildOutput } from "./validate.js";
 import type { BoardIR } from "./types.js";
 import { buildPresentation } from "../presentation/index.js";
 import type { PresentationSlide } from "../presentation/index.js";
+import { buildDocument } from "../presentation/document.js";
 
 export interface RenderOptions {
   readonly title?: string;
@@ -23,24 +24,34 @@ export type RenderPresentationOptions = RenderOptions;
 export interface RenderedPresentation {
   readonly html: string;
   readonly slideCount: number;
+  readonly type: "presentation" | "document";
 }
 
-function assemblePresentation(
+function assembleOutput(
   board: BoardIR,
   slides: readonly PresentationSlide[],
   options: RenderOptions,
   footer?: { left?: string; right?: string },
 ): RenderedPresentation {
-  const html = buildPresentation(slides, {
-    documentTitle: board.title,
-    documentSubtitle: board.subtitle,
-    documentFooter: footer,
-    version: options.version,
-    repositoryUrl: options.repositoryUrl,
-    liveReload: options.liveReload,
-  });
+  const html = board.type === "document"
+    ? buildDocument(slides, {
+      documentTitle: board.title,
+      documentSubtitle: board.subtitle,
+      documentFooter: footer,
+      version: options.version,
+      repositoryUrl: options.repositoryUrl,
+      liveReload: options.liveReload,
+    })
+    : buildPresentation(slides, {
+      documentTitle: board.title,
+      documentSubtitle: board.subtitle,
+      documentFooter: footer,
+      version: options.version,
+      repositoryUrl: options.repositoryUrl,
+      liveReload: options.liveReload,
+    });
   validateBuildOutput(html);
-  return { html, slideCount: slides.length };
+  return { html, slideCount: slides.length, type: board.type };
 }
 
 function renderFooter(
@@ -120,7 +131,7 @@ export function render(markdown: string, options: RenderOptions = {}): RenderedP
     }
   }
   const footer = renderFooter(board.footer, options);
-  return assemblePresentation(board, slides, options, footer);
+  return assembleOutput(board, slides, options, footer);
 }
 
 export async function renderAsync(markdown: string, options: RenderOptions = {}): Promise<RenderedPresentation> {
@@ -145,7 +156,7 @@ export async function renderAsync(markdown: string, options: RenderOptions = {})
     }
   }
   const footer = await renderFooterAsync(board.footer, resolveImage, options.resolveWikiImage, options.resolveMermaid);
-  return assemblePresentation(board, slides, options, footer);
+  return assembleOutput(board, slides, options, footer);
 }
 
 export function renderPresentationFromMarkdown(

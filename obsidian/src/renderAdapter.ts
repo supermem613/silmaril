@@ -21,6 +21,86 @@ export function createWikiImageResolver(
 const previewBridgeScript = `
 <script>
   (function () {
+    var documentPage = document.querySelector('[data-silmaril-document]');
+    if (documentPage) {
+      var sections = Array.prototype.slice.call(documentPage.querySelectorAll('[data-slide-id]'));
+      var readSlide = function () {
+        if (window.scrollY < 40 && sections.length > 0) {
+          var firstTop = sections[0].getBoundingClientRect().top;
+          if (firstTop > 80) {
+            return { slideId: 'overview', slideIndex: 0 };
+          }
+        }
+        var threshold = window.innerHeight * 0.35;
+        var activeIndex = 0;
+        for (var index = 0; index < sections.length; index += 1) {
+          if (sections[index].getBoundingClientRect().top <= threshold) {
+            activeIndex = index;
+          }
+        }
+        var active = sections[activeIndex];
+        return active
+          ? { slideId: active.getAttribute('data-slide-id') || '', slideIndex: activeIndex + 1 }
+          : { slideId: 'overview', slideIndex: 0 };
+      };
+      var postSlide = function (type) {
+        var slide = readSlide();
+        window.parent.postMessage({
+          type: type,
+          slideId: slide.slideId,
+          slideIndex: slide.slideIndex
+        }, '*');
+      };
+      var afterPaint = function (callback) {
+        window.requestAnimationFrame(function () {
+          window.requestAnimationFrame(callback);
+        });
+      };
+      var announceReady = function () {
+        afterPaint(function () {
+          postSlide('silmaril-preview-ready');
+        });
+      };
+      var scrollFrame = null;
+      window.addEventListener('scroll', function () {
+        if (scrollFrame !== null) {
+          return;
+        }
+        scrollFrame = window.requestAnimationFrame(function () {
+          scrollFrame = null;
+          postSlide('silmaril-preview-state');
+        });
+      }, { passive: true });
+      window.addEventListener('message', function (event) {
+        var data = event.data;
+        if (event.source !== window.parent
+          || !data
+          || data.type !== 'silmaril-preview-restore') {
+          return;
+        }
+        if (data.slideId === 'overview') {
+          window.scrollTo({ top: 0, behavior: 'auto' });
+          announceReady();
+          return;
+        }
+        var target = sections.find(function (section) {
+          return section.getAttribute('data-slide-id') === data.slideId;
+        });
+        if (!target && Number.isInteger(data.slideIndex) && sections.length > 0) {
+          var index = Math.max(0, Math.min(data.slideIndex - 1, sections.length - 1));
+          target = sections[index];
+        }
+        if (!target) {
+          announceReady();
+          return;
+        }
+        target.scrollIntoView({ block: 'start', behavior: 'auto' });
+        announceReady();
+      });
+      announceReady();
+      return;
+    }
+
     var readSlide = function () {
       var steps = Array.prototype.slice.call(document.querySelectorAll('.step'));
       var active = document.querySelector('.step.active');

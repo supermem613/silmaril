@@ -346,7 +346,7 @@ export class SilmarilDeckView extends ItemView {
   private createIframe(): HTMLIFrameElement {
     const iframe = document.createElement('iframe');
     iframe.className = 'silmaril-preview__frame';
-    iframe.title = 'Silmaril presentation preview';
+    iframe.title = 'Silmaril presentation or document preview';
     // This grants scripts and same-origin access only to our trusted, self-generated deck.
     iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
     return iframe;

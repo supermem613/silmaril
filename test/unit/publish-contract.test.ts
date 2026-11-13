@@ -13,6 +13,7 @@ type Envelope = {
   ok?: unknown;
   data?: {
     slideCount?: unknown;
+    type?: unknown;
   };
   error?: unknown;
 };
@@ -44,6 +45,7 @@ test("publish command emits a success envelope named \"publish\"", () => {
     assert.ok(payload.data && typeof payload.data === "object");
     assert.equal(typeof payload.data?.slideCount, "number");
     assert.ok(Number.isFinite(payload.data?.slideCount));
+    assert.equal(payload.data?.type, "presentation");
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

@@ -26,10 +26,11 @@ test("publish emits a successful machine-readable result", () => {
       encoding: "utf8",
     });
     assert.equal(result.status, 0, result.stderr || result.stdout);
-    const payload = JSON.parse(result.stdout) as { ok: boolean; data: { outputPath: string; slideCount: number } };
+    const payload = JSON.parse(result.stdout) as { ok: boolean; data: { outputPath: string; slideCount: number; type: string } };
     assert.equal(payload.ok, true);
     assert.equal(payload.data.outputPath, outputPath);
     assert.equal(payload.data.slideCount, 1);
+    assert.equal(payload.data.type, "presentation");
     assert.match(readFileSync(outputPath, "utf8"), /<h2>Intro<\/h2>/);
   } finally {
     rmSync(directory, { recursive: true, force: true });

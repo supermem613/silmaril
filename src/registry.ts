@@ -54,7 +54,7 @@ export const commandSpecs: CommandSpec[] = [
   },
   {
     path: ["publish"],
-    summary: "Publish a Markdown presentation as a single HTML file.",
+    summary: "Publish a Markdown presentation or scrolling document as a single HTML file.",
     effect: "mutate-local",
     input: {
       positionals: ["input"],
@@ -65,12 +65,12 @@ export const commandSpecs: CommandSpec[] = [
     },
     output: { documented: true, schema: "PublishResult", coverage: ["filesystem", "stdout", "stderr"] },
     examples: ["publish slides.md", "publish slides.md --out slides.html", "publish slides.md --open"],
-    readmeSummary: "publish - Publish a Markdown presentation as a single HTML file.",
-    skillReferences: ["publish", "presentation"],
+    readmeSummary: "publish - Publish a Markdown presentation or scrolling document as a single HTML file.",
+    skillReferences: ["publish", "presentation", "document"],
   },
   {
     path: ["serve"],
-    summary: "Serve a Markdown presentation locally with live reload.",
+    summary: "Serve a Markdown presentation or scrolling document locally with live reload.",
     effect: "read",
     input: {
       positionals: ["input"],
@@ -81,8 +81,8 @@ export const commandSpecs: CommandSpec[] = [
     },
     output: { documented: true, schema: "ServeResult", coverage: ["network", "stdout", "stderr"] },
     examples: ["serve slides.md", "serve slides.md --port 4000", "serve slides.md --open"],
-    readmeSummary: "serve - Serve a Markdown presentation locally with live reload.",
-    skillReferences: ["serve", "live-reload"],
+    readmeSummary: "serve - Serve a Markdown presentation or scrolling document locally with live reload.",
+    skillReferences: ["serve", "live-reload", "document"],
   },
   {
     path: ["update"],

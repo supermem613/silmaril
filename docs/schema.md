@@ -24,6 +24,7 @@ The success envelope contains:
     "outputPath": "C:\\path\\to\\talk.html",
     "byteCount": 12345,
     "slideCount": 4,
+    "type": "presentation",
     "open": null
   },
   "warnings": []
@@ -31,6 +32,8 @@ The success envelope contains:
 ```
 
 `open` is `null` unless `--open` is used. When requested, it records whether launch was requested and the output path passed to the default application.
+
+`type` is `"presentation"` when the Markdown contains no output directive or explicitly uses `:::silmaril presentation`; it is `"document"` when the Markdown uses `:::silmaril document`.
 
 ## Other commands
 

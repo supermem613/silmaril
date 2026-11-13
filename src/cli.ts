@@ -11,7 +11,7 @@ const program = new Command();
 
 program
   .name("silmaril")
-  .description("A trivial, no-frills Markdown-to-slides pipeline for engineers")
+  .description("A deterministic Markdown pipeline for presentations and scrolling documents")
   .version(version);
 
 program
@@ -34,7 +34,7 @@ program
 
 program
   .command("publish <input>")
-  .description("Publish a Markdown presentation as a single HTML file")
+  .description("Publish a Markdown presentation or scrolling document as a single HTML file")
   .option("--out <file>", "Write the HTML to a file instead of the system temp directory")
   .option("--open", "Open the generated HTML in the default application")
   .action(async (input: string, opts: { out?: string; open?: boolean }) => {
@@ -44,7 +44,7 @@ program
 
 program
   .command("serve <input>")
-  .description("Serve a Markdown presentation locally with live reload and in-browser editing")
+  .description("Serve a Markdown presentation or scrolling document locally with live reload")
   .option("--port <port>", "Port to listen on", String(5173))
   .option("--open", "Open the presentation in the default browser")
   .action(async (input: string, opts: { port?: string; open?: boolean }) => {

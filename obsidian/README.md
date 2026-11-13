@@ -1,6 +1,6 @@
 # Silmaril for Obsidian
 
-Preview a Silmaril Markdown deck beside the Obsidian editor. The plugin saves
+Preview a Silmaril Markdown presentation or scrolling document beside the Obsidian editor. The plugin saves
 the active editor buffer, waits for a short edit debounce, and renders the same
 offline presentation produced by Silmaril.
 
@@ -33,13 +33,15 @@ copies `main.js`, `manifest.json`, and `styles.css` into the vault's
 
 ## Use
 
-Open a Markdown file that uses one optional `#` deck title and one `##` heading
-per slide. Run **Open Silmaril preview** from the command palette or use the
+Open a Markdown file that uses one optional `#` title and ordered `##` headings.
+Without a directive, the preview is a presentation. Add `:::silmaril document`
+and close it with `:::` in the title preamble to preview a continuous scrolling
+document. Run **Open Silmaril preview** from the command palette or use the
 presentation ribbon icon. The preview follows the most recently active Markdown
 editor and updates after the file saves.
-Moving the editor cursor onto a slide navigates the preview to that slide, so
-scrolling through the Markdown walks the deck alongside it. A cursor above the
-first `##` heading shows the board overview.
+In presentation mode, moving the editor cursor onto a slide navigates the preview
+to that slide. In document mode, it scrolls the matching `##` section into view.
+In both modes, a cursor above the first `##` heading returns to the title or overview.
 HTTP and HTTPS images, such as `![Diagram](https://example.com/diagram.png)`,
 are downloaded and embedded before the preview appears. A download failure is
 reported as a preview error. Image syntax in code examples remains code.

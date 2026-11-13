@@ -1,6 +1,6 @@
-# Authoring presentations
+# Authoring presentations and documents
 
-Silmaril turns ordinary headings into slides.
+Silmaril turns ordinary headings into presentations or single-page scrolling documents.
 
 ````markdown
 # Architecture review
@@ -38,6 +38,27 @@ The subtitle is the first paragraph after the title, with blank lines allowed be
 
 The board overview shows the subtitle below the title in smaller, muted text. Long text wraps, and the overview fits the heading and slide cards without overlap. Subtitles do not change the browser title, slide count, or focused-slide view.
 
+### Choose the output type
+
+The output type is explicit Markdown metadata. It defaults to presentation when the directive is absent:
+
+```markdown
+# Architecture review
+
+:::silmaril document
+:::
+
+## Context
+
+Natural-height document content.
+```
+
+Use `:::silmaril presentation` to select the presentation explicitly. `:::silmaril document` selects a continuous, natural-height page. No directive remains the presentation default.
+
+Place the directive in the title preamble before the first `##` heading. The block must contain exactly no body text, may appear only once, and must close with `:::`. Missing or unknown types are rejected.
+
+In document mode, `##` headings create ordered natural-height sections, not fixed 1000 × 700 presentation cards. The title, subtitle, presentation color/typography tokens, footer content, local and remote images, Markdown formatting, tables, code, and Mermaid diagrams remain presentation-styled. The page scrolls normally and does not initialize impress.js or slide fitting. Footers appear once at the end of the document.
+
 ### Section slides
 
 Use `:::section` below a `##` heading to center the heading in the middle of the slide:
@@ -61,7 +82,7 @@ The `:::section` block must be the entire body of the slide. An empty block crea
 
 ### Footers
 
-Deck-wide footer blocks can add a fixed image-plus-text line to the bottom left or bottom right of every view:
+Deck-wide footer blocks can add an image-plus-text line to the left or right side:
 
 ```markdown
 # Architecture review
@@ -81,7 +102,9 @@ Internal · 2026
 
 Place `:::footer left` or `:::footer right` blocks in the title preamble, before the first slide. Each block is optional and accepts exactly one non-empty line. The line can use inline Markdown, including a local or embedded image. Duplicate sides, unknown sides, unterminated blocks, and multiline text are rejected.
 
-The left and right footers remain fixed in the bottom-left and bottom-right corners of the whole-board overview and focused slides. They do not consume slide-card layout space.
+In presentation output, the left and right footers remain fixed in the bottom-left and bottom-right corners of the whole-board overview and focused slides. They do not consume slide-card layout space.
+
+In document output, the left and right footers appear together once at the end of the document in normal flow. They do not remain visible while scrolling and do not repeat between sections.
 
 ## Slide content
 
@@ -111,9 +134,11 @@ Inside a `:::columns` block, a top-level `---` is a column divider rather than a
 
 ### Content fitting
 
-When a slide overflows, Silmaril reduces its heading, body fonts, and text spacing by one shared factor. It measures the result after text wraps and keeps the largest factor that fits the existing card. Slides that already fit keep their normal sizes. Images and diagrams shrink within the available space.
+Content fitting applies only to presentation output. When a slide overflows, Silmaril reduces its heading, body fonts, and text spacing by one shared factor. It measures the result after text wraps and keeps the largest factor that fits the existing card. Slides that already fit keep their normal sizes. Images and diagrams shrink within the available space.
 
 Fitting runs again after content edits, image and font loads, and window size changes. Removing excess content restores normal sizes. There is no minimum font size, so very dense slides can become difficult to read. Split them into more slides for a larger font. If fixed content, such as a table's borders, cannot fit at any font size, the card scrolls instead of cropping it.
+
+Document output does not fit or shrink fixed cards. It uses natural section height and normal browser scrolling.
 
 ## Publish
 
@@ -128,6 +153,8 @@ Without `--out`, Silmaril writes `<source-name>.html` to the system temp directo
 ## Present
 
 The presentation starts on the whole-board overview. Arrow keys move through slides. Focused-slide mode isolates the active slide and shows quiet edge cues when another slide exists in that direction. The board signature is `silmaril · <version>`.
+
+Document output starts at the document header and scrolls naturally. Its `##` sections are stable source anchors, and the board signature is omitted from document content.
 
 ## Edit with live reload
 
@@ -147,22 +174,22 @@ If you want to render a Markdown string from another program, import `render` fr
 import { render } from "silmaril";
 
 const markdown = "# Review\n\n## Context\n\nRender this from memory.";
-const { html, slideCount } = render(markdown, {
+const { html, slideCount, type } = render(markdown, {
   title: "Review deck",
   assetBaseDir: "/assets",
 });
 ```
 
-`render(markdown, options)` synchronously returns `{ html, slideCount }` and supports local and embedded images. The options object can include `title`, `assetBaseDir`, `version`, `repositoryUrl`, and `liveReload`. Local image paths are resolved relative to `assetBaseDir`.
+`render(markdown, options)` synchronously returns `{ html, slideCount, type }` and supports local and embedded images. `type` is `"presentation"` or `"document"`. The options object can include `title`, `assetBaseDir`, `version`, `repositoryUrl`, and `liveReload`. Local image paths are resolved relative to `assetBaseDir`.
 
 For remote images, use the additive async API:
 
 ```js
 import { renderAsync } from "silmaril";
 
-const { html, slideCount } = await renderAsync(
+const { html, slideCount, type } = await renderAsync(
   "## Diagram\n\n![Architecture](https://example.com/architecture.png)",
 );
 ```
 
-`renderAsync(markdown, options)` accepts the same options and returns a Promise of `{ html, slideCount }`. CLI publish, live serve, and the Obsidian plugin await this shared path internally. Existing synchronous `render()` callers do not need to change.
+`renderAsync(markdown, options)` accepts the same options and returns a Promise of `{ html, slideCount, type }`. CLI publish, live serve, and the Obsidian plugin await this shared path internally. Existing synchronous `render()` callers do not need to change.

@@ -36,6 +36,18 @@ test('renderDeck returns html and slideCount for a multi-slide deck', async () =
   assert.ok(result.html.includes('silmaril-preview-restore'));
 });
 
+test('renderDeck renders a scrolling document without presentation steps', async () => {
+  const fixture = '# Architecture review\n\n:::silmaril document\n:::\n\n## Context\n\nNatural-height body.';
+  const result = await renderDeck(fixture, 'document.md');
+
+  assert.equal(result.slideCount, 1);
+  assert.ok(result.html.includes('data-silmaril-document'));
+  assert.ok(result.html.includes('engineering-document'));
+  assert.ok(!result.html.includes('<div id="impress"'));
+  assert.ok(result.html.includes('scrollIntoView'));
+  assert.ok(result.html.includes('silmaril-preview-restore'));
+});
+
 test('renderDeck downloads and embeds remote images for the preview', async (t) => {
   const image = '<svg xmlns="http://www.w3.org/2000/svg"/>';
   const server = createServer((_request, response) => {

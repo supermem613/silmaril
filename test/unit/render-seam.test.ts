@@ -8,6 +8,113 @@ import * as silmaril from "../../src/index.js";
 import { buildPresentation } from "../../src/presentation/index.js";
 
 describe("render export surface", () => {
+  it("renders a document as natural-height scrolling HTML through both APIs", async () => {
+    const markdown = [
+      "# Architecture review",
+      "",
+      "An engineering document",
+      "",
+      ":::silmaril document",
+      ":::",
+      "",
+      "## Context",
+      "",
+      "A long **readable** section.",
+      "",
+      "## Decision",
+      "",
+      "| Choice | Result |",
+      "| --- | --- |",
+      "| A | Selected |",
+    ].join("\n");
+    const results = [silmaril.render(markdown), await silmaril.renderAsync(markdown)];
+
+    for (const result of results) {
+      assert.equal(result.type, "document");
+      assert.equal(result.slideCount, 2);
+      assert.match(result.html, /<body class="engineering-document">/);
+      assert.match(result.html, /data-silmaril-document/);
+      assert.match(result.html, /<h1>Architecture review<\/h1>/);
+      assert.match(result.html, /<h2>Context<\/h2>/);
+      assert.match(result.html, /<strong>readable<\/strong>/);
+      assert.match(result.html, /<table>/);
+      assert.doesNotMatch(
+        result.html,
+        /class="[^"]*engineering-card engineering-document__section/,
+      );
+      assert.match(
+        result.html,
+        /\.engineering-document__section\s+table\s*\{[^}]*width:\s*100%;/,
+      );
+      assert.match(
+        result.html,
+        /\.engineering-document__section--section\s*\{[^}]*min-height:\s*0;/,
+      );
+      assert.match(
+        result.html,
+        /\.engineering-document__sections\s*\{[^}]*gap:\s*0\.75rem;/,
+      );
+      assert.match(
+        result.html,
+        /\.engineering-document__section\s+h2\s*\{[^}]*margin:\s*1\.25rem\s+0\s+0\.75rem;[^}]*font-size:\s*2rem;/,
+      );
+      assert.match(
+        result.html,
+        /\.engineering-document__section\s+h3\s*\{[^}]*font-size:\s*1\.35rem;/,
+      );
+      assert.match(
+        result.html,
+        /\.engineering-document__section\s+h3\s*\{[^}]*margin:\s*1\.25rem\s+0\s+0\.35rem;/,
+      );
+      assert.match(
+        result.html,
+        /\.engineering-document__section\s+table\s*\{[^}]*table-layout:\s*auto;[^}]*border-collapse:\s*collapse;/,
+      );
+      assert.doesNotMatch(result.html, /<div id="impress"/);
+      assert.doesNotMatch(result.html, /window\.impress/);
+    }
+  });
+
+  it("renders deck footers at the end of a document, never fixed to the viewport", () => {
+    const markdown = [
+      "# Review",
+      "",
+      ":::footer left",
+      "**Platform** Engineering",
+      ":::",
+      "",
+      ":::footer right",
+      "Internal · 2026",
+      ":::",
+      "",
+      ":::silmaril document",
+      ":::",
+      "",
+      "## Context",
+      "",
+      "Body",
+    ].join("\n");
+    const result = silmaril.render(markdown);
+
+    assert.equal(result.type, "document");
+    assert.match(result.html, /<footer class="engineering-document__footer">/);
+    assert.match(result.html, /engineering-document__footer--left[\s\S]*Platform/);
+    assert.match(result.html, /engineering-document__footer--right[\s\S]*Internal · 2026/);
+    assert.ok(result.html.indexOf("<footer class=\"engineering-document__footer\">") > result.html.indexOf("<h2>Context</h2>"));
+    assert.doesNotMatch(result.html, /<div class="engineering-footer/);
+    assert.doesNotMatch(result.html, /\.engineering-document__footer[\s\S]*position:\s*fixed/);
+  });
+
+  it("preserves presentation output as the default and supports an explicit presentation directive", () => {
+    const implicit = silmaril.render("# Deck\n\n## First\n\nBody");
+    const explicit = silmaril.render("# Deck\n\n:::silmaril presentation\n:::\n\n## First\n\nBody");
+
+    assert.equal(implicit.type, "presentation");
+    assert.equal(explicit.type, "presentation");
+    assert.match(implicit.html, /<div id="impress"/);
+    assert.match(explicit.html, /<div id="impress"/);
+  });
+
   it("render is exported as a pure string-in/HTML-out function", () => {
     assert.equal(typeof silmaril.render, "function");
 
@@ -200,7 +307,10 @@ describe("render export surface", () => {
       const markdown = `${preamble}\n\n## First\n\nBody`;
       assert.deepEqual(
         [silmaril.render(markdown, { title: "Deck" }), await silmaril.renderAsync(markdown, { title: "Deck" })],
-        [{ html: expected, slideCount: 1 }, { html: expected, slideCount: 1 }],
+        [
+          { html: expected, slideCount: 1, type: "presentation" },
+          { html: expected, slideCount: 1, type: "presentation" },
+        ],
         preamble,
       );
     }
